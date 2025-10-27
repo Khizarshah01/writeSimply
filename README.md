@@ -1,3 +1,7 @@
+### 💖 Support
+If you like this project, 👉 [Buy Me a Coffee](https://www.buymeacoffee.com/khizarshah01)
+
+
 
 ![show](https://github.com/user-attachments/assets/fd7f2ed1-5855-465c-a3b7-36df24f24b8d)
 
