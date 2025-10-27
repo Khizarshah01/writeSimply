@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from "react";
 import MusicPlayer from "./MusicPlayer";
 import { SlEarphones } from "react-icons/sl";
+import { invoke } from "@tauri-apps/api/core";
+import { getNextUntitledName } from "../utils";
 
 interface NavbarProps {
   theme: string;
@@ -9,6 +11,8 @@ interface NavbarProps {
   currentFileName: string | null;
   isSaved: boolean;
   onRename: (newName: string) => void;
+  autoSave: boolean;
+  onToggleAutoSave: () => void;
 }
 
 const Navbar: React.FC<NavbarProps> = ({
@@ -18,10 +22,28 @@ const Navbar: React.FC<NavbarProps> = ({
   currentFileName,
   isSaved,
   onRename,
+  autoSave,
+  onToggleAutoSave,
 }) => {
   const [showMusicPlayer, setShowMusicPlayer] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [editName, setEditName] = useState(currentFileName || "None");
+  const [editName, setEditName] = useState(() => {
+    return currentFileName || "";
+  });
+
+  useEffect(() => {
+    if (currentFileName) {
+      setEditName(currentFileName);
+      return;
+    }
+    (async () => {
+      const files = await invoke<string[]>("list_files");
+      const newName = getNextUntitledName(files);
+      setEditName(newName);
+      onRename(newName.trim());
+    })();
+  }, [currentFileName]);
+
   const inputRef = useRef<HTMLInputElement>(null);
 
   const toggleTheme = () => setTheme(theme === "light" ? "dark" : "light");
@@ -35,9 +57,6 @@ const Navbar: React.FC<NavbarProps> = ({
   }, [isEditing]);
 
   // Update editName when currentFileName changes
-  useEffect(() => {
-    setEditName(currentFileName || "");
-  }, [currentFileName]);
 
   const handleNameSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,7 +91,11 @@ const Navbar: React.FC<NavbarProps> = ({
           onClick={toggleTheme}
           className="cursor-pointer hover:opacity-50 transition-opacity"
         >
-          {theme === "light" ? <p className="text-black">Dark</p> : <p className="text-white">Light</p>}
+          {theme === "light" ? (
+            <p className="text-black">Dark</p>
+          ) : (
+            <p className="text-white">Light</p>
+          )}
         </div>
 
         {/* Center: Status dot + File name input */}
@@ -86,8 +109,9 @@ const Navbar: React.FC<NavbarProps> = ({
               ></span>
             )}
             <span
-              className={`relative inline-flex rounded-full h-2 w-2 ${isSaved ? "!bg-green-500" : "!bg-red-500"
-                } border border-white`}
+              className={`relative inline-flex rounded-full h-2 w-2 ${
+                isSaved ? "!bg-green-500" : "!bg-red-500"
+              } border border-white`}
             ></span>
           </span>
 
@@ -110,20 +134,35 @@ const Navbar: React.FC<NavbarProps> = ({
 
         {/* Right: Save button + Music */}
         <div className="flex items-center gap-6">
-          <button
-            onClick={onSave}
-            className="cursor-pointer hover:opacity-50 transition-opacity px-3 py-1 border-[var(--text-color)]"
-          >
-            Save
-          </button>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => onSave()}
+              className="cursor-pointer hover:opacity-50 transition-opacity px-3 py-1 border-[var(--text-color)]"
+            >
+              Save
+            </button>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="autoSave"
+                checked={autoSave}
+                onChange={onToggleAutoSave}
+                className="cursor-pointer"
+              />
+              <label htmlFor="autoSave" className="cursor-pointer select-none">
+                Auto Save
+              </label>
+            </div>
+          </div>
 
           <div className="relative">
             <button
               onClick={toggleMusicPlayer}
-              className={`cursor-pointer transition-all duration-300 p-2 rounded-full ${showMusicPlayer
+              className={`cursor-pointer transition-all duration-300 p-2 rounded-full ${
+                showMusicPlayer
                   ? "bg-[var(--accent-color)] text-white"
                   : "hover:bg-[var(--hover-bg)] hover:opacity-70"
-                }`}
+              }`}
             >
               <SlEarphones size={17} />
             </button>
@@ -132,7 +171,9 @@ const Navbar: React.FC<NavbarProps> = ({
       </nav>
 
       {/* Music Player Widget */}
-      {showMusicPlayer && <MusicPlayer onClose={() => setShowMusicPlayer(false)} />}
+      {showMusicPlayer && (
+        <MusicPlayer onClose={() => setShowMusicPlayer(false)} />
+      )}
     </>
   );
 };

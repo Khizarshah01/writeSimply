@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import "./App.css";
 
@@ -7,7 +7,6 @@ import FooterPanel from "./components/FooterPanel";
 import Navbar from "./components/Navbar";
 import HistoryPanel from "./components/HistoryPanel";
 import NotificationContainer from "./components/NotificationContainer";
-
 
 // Types for writing session
 interface WritingFile {
@@ -23,6 +22,7 @@ interface AppState {
   font: string;
   fontSize: number;
   editorContent: string;
+  autoSave: boolean;
 }
 
 const DEFAULT_THEME = "light";
@@ -36,11 +36,13 @@ function App() {
       const savedFont = localStorage.getItem("font");
       const savedFontSize = localStorage.getItem("fontSize");
       const savedContent = localStorage.getItem("editorContent");
+      const savedAutoSave = localStorage.getItem("autoSave");
       return {
         theme: savedTheme || DEFAULT_THEME,
         font: savedFont || DEFAULT_FONT,
         fontSize: savedFontSize ? parseInt(savedFontSize) : DEFAULT_FONT_SIZE,
         editorContent: savedContent || "",
+        autoSave: savedAutoSave === "true",
       };
     } catch (error) {
       console.error("Error loading saved preferences:", error);
@@ -49,6 +51,7 @@ function App() {
         font: DEFAULT_FONT,
         fontSize: DEFAULT_FONT_SIZE,
         editorContent: "",
+        autoSave: false,
       };
     }
   });
@@ -58,19 +61,23 @@ function App() {
   const [isSaved, setIsSaved] = useState(true);
   const [currentFileName, setCurrentFileName] = useState<string | null>(null);
   // 🧠 Notification state
-const [notifications, setNotifications] = useState<
-  { id: number; type: "success" | "error" | "info"; message: string }[]
->([]);
+  const [notifications, setNotifications] = useState<
+    { id: number; type: "success" | "error" | "info"; message: string }[]
+  >([]);
 
-const addNotification = (type: "success" | "error" | "info", message: string) => {
-  const id = Date.now();
-  setNotifications((prev) => [...prev, { id, type, message }]);
-};
+  const addNotification = (
+    type: "success" | "error" | "info",
+    message: string,
+  ) => {
+    const id = Date.now();
+    setNotifications((prev) => [...prev, { id, type, message }]);
+  };
 
-const removeNotification = (id: number) => {
-  setNotifications((prev) => prev.filter((n) => n.id !== id));
-};
+  const removeNotification = (id: number) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  };
 
+  const saveTimeoutRef = useRef<number | null>(null);
 
   // Save preferences to localStorage
   useEffect(() => {
@@ -80,19 +87,48 @@ const removeNotification = (id: number) => {
       localStorage.setItem("font", appState.font);
       localStorage.setItem("fontSize", appState.fontSize.toString());
       localStorage.setItem("editorContent", appState.editorContent);
+      localStorage.setItem("autoSave", appState.autoSave.toString());
+
+      if (currentFileName && appState.autoSave) {
+        if (saveTimeoutRef.current !== null) {
+          clearTimeout(saveTimeoutRef.current);
+        }
+        saveTimeoutRef.current = setTimeout(() => {
+          handleSave();
+        }, 1000);
+      }
     } catch (error) {
       console.error("Error saving preferences:", error);
     }
-  }, [appState]);
+    return () => {
+      if (saveTimeoutRef.current !== null) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [appState, currentFileName]);
 
   // State updaters
-  const setTheme = useCallback((theme: string) => setAppState(prev => ({ ...prev, theme })), []);
-  const setFont = useCallback((font: string) => setAppState(prev => ({ ...prev, font })), []);
-  const setFontSize = useCallback((fontSize: number) => setAppState(prev => ({ ...prev, fontSize })), []);
-  
+  const setTheme = useCallback(
+    (theme: string) => setAppState((prev) => ({ ...prev, theme })),
+    [],
+  );
+  const setFont = useCallback(
+    (font: string) => setAppState((prev) => ({ ...prev, font })),
+    [],
+  );
+  const setFontSize = useCallback(
+    (fontSize: number) => setAppState((prev) => ({ ...prev, fontSize })),
+    [],
+  );
+
+  const toggleAutoSave = useCallback(
+    () => setAppState((prev) => ({ ...prev, autoSave: !prev.autoSave })),
+    [],
+  );
+
   // Track editor changes and mark unsaved
   const setEditorContent = useCallback((content: string) => {
-    setAppState(prev => ({ ...prev, editorContent: content }));
+    setAppState((prev) => ({ ...prev, editorContent: content }));
     setIsSaved(false); // mark unsaved whenever content changes
   }, []);
 
@@ -107,15 +143,15 @@ const removeNotification = (id: number) => {
   }, []);
 
   // Save session to file
-  const handleSave = useCallback(async () => {
+  const handleSave = useCallback(async (isManual = false) => {
     try {
       let fileName = currentFileName;
 
       // Ask for name only if it's a new file
-     if (!fileName || fileName.trim() === "") {
-      addNotification("error", "Enter file name please!");
-      return;
-    }
+      if (!fileName || fileName.trim() === "") {
+        addNotification("error", "Enter file name please!");
+        return;
+      }
 
       const file: WritingFile = {
         name: fileName,
@@ -127,7 +163,9 @@ const removeNotification = (id: number) => {
 
       const result = await invoke<string>("save_file", { file });
       console.log("Save result:", result);
-      addNotification("success", "File saved successfully!");
+      if (isManual) {
+        addNotification("success", "File saved successfully!");
+      }
       setIsSaved(true);
       refreshFileList();
     } catch (error) {
@@ -140,7 +178,7 @@ const removeNotification = (id: number) => {
   const handleLoadFile = useCallback(async (fileName: string) => {
     try {
       const file = await invoke<WritingFile>("load_file", { name: fileName });
-      setAppState(prev => ({
+      setAppState((prev) => ({
         ...prev,
         editorContent: file.text,
         font: file.font,
@@ -158,23 +196,26 @@ const removeNotification = (id: number) => {
   }, []);
 
   // Delete file
-  const handleDeleteFile = useCallback(async (fileName: string) => {
-    try {
-      if (confirm(`Are you sure you want to delete "${fileName}"?`)) {
-        await invoke<string>("delete_file", { name: fileName });
-        if (currentFileName === fileName) {
-          setCurrentFileName(null);
-          setIsSaved(true);
-          setEditorContent(""); // reset editor
+  const handleDeleteFile = useCallback(
+    async (fileName: string) => {
+      try {
+        if (confirm(`Are you sure you want to delete "${fileName}"?`)) {
+          await invoke<string>("delete_file", { name: fileName });
+          if (currentFileName === fileName) {
+            setCurrentFileName(null);
+            setIsSaved(true);
+            setEditorContent(""); // reset editor
+          }
+          refreshFileList();
+          addNotification("info", "File deleted successfully.");
         }
-        refreshFileList();
-        addNotification("info", "File deleted successfully.");
+      } catch (error) {
+        console.error("Error deleting file:", error);
+        addNotification("error", "Error deleting file: " + String(error));
       }
-    } catch (error) {
-      console.error("Error deleting file:", error);
-      addNotification("error", "Error deleting file: " + String(error));
-    }
-  }, [currentFileName, refreshFileList, setEditorContent]);
+    },
+    [currentFileName, refreshFileList, setEditorContent],
+  );
 
   // New session
   const handleNewSession = useCallback(() => {
@@ -188,7 +229,7 @@ const removeNotification = (id: number) => {
   }, []);
 
   const toggleHistory = useCallback(() => {
-    setShowHistory(prev => {
+    setShowHistory((prev) => {
       if (!prev) refreshFileList();
       return !prev;
     });
@@ -200,24 +241,24 @@ const removeNotification = (id: number) => {
 
   return (
     <div className="app-container min-h-screen flex flex-col bg-[var(--background)] text-[var(--text-color)] transition-colors duration-300 relative">
-      <Navbar 
-        theme={appState.theme} 
+      <Navbar
+        theme={appState.theme}
         setTheme={setTheme}
-        onSave={handleSave}
+        onSave={() => handleSave(true)}
         currentFileName={currentFileName}
         isSaved={isSaved}
         onRename={handleRename}
+        autoSave={appState.autoSave}
+        onToggleAutoSave={toggleAutoSave}
       />
-      
-      
-        <Editor 
-          font={appState.font} 
-          fontSize={appState.fontSize} 
-          theme={appState.theme}
-          content={appState.editorContent}
-          onContentChange={setEditorContent}
-        />
-     
+
+      <Editor
+        font={appState.font}
+        fontSize={appState.fontSize}
+        theme={appState.theme}
+        content={appState.editorContent}
+        onContentChange={setEditorContent}
+      />
 
       <FooterPanel
         font={appState.font}
@@ -239,9 +280,9 @@ const removeNotification = (id: number) => {
         />
       )}
       <NotificationContainer
-  notifications={notifications}
-  removeNotification={removeNotification}
-/>
+        notifications={notifications}
+        removeNotification={removeNotification}
+      />
     </div>
   );
 }
