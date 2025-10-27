@@ -1,8 +1,10 @@
 import React, { useState, useRef, useEffect } from "react";
 import MusicPlayer from "./MusicPlayer";
 import { SlEarphones } from "react-icons/sl";
+import { IoSettingsOutline } from "react-icons/io5";
 import { invoke } from "@tauri-apps/api/core";
 import { getNextUntitledName } from "../utils";
+import SettingsPanel from "./SettingsPanel";
 
 interface NavbarProps {
   theme: string;
@@ -27,6 +29,7 @@ const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const [showMusicPlayer, setShowMusicPlayer] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [editName, setEditName] = useState(() => {
     return currentFileName || "";
   });
@@ -46,7 +49,6 @@ const Navbar: React.FC<NavbarProps> = ({
 
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const toggleTheme = () => setTheme(theme === "light" ? "dark" : "light");
   const toggleMusicPlayer = () => setShowMusicPlayer(!showMusicPlayer);
 
   // Focus input when editing starts
@@ -88,15 +90,12 @@ const Navbar: React.FC<NavbarProps> = ({
       <nav className="flex justify-between items-center px-8 py-4 select-none relative">
         {/* Left: Theme toggle */}
         <div
-          onClick={toggleTheme}
-          className="cursor-pointer hover:opacity-50 transition-opacity"
+          onClick={() => setShowSettings(!showSettings)}
+          className="cursor-pointer hover:opacity-50 transition-opacity flex items-center gap-2"
         >
-          {theme === "light" ? (
-            <p className="text-black">Dark</p>
-          ) : (
-            <p className="text-white">Light</p>
-          )}
+          <IoSettingsOutline size={19} />
         </div>
+
 
         {/* Center: Status dot + File name input */}
         <div className="flex items-center gap-2 absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
@@ -109,9 +108,8 @@ const Navbar: React.FC<NavbarProps> = ({
               ></span>
             )}
             <span
-              className={`relative inline-flex rounded-full h-2 w-2 ${
-                isSaved ? "!bg-green-500" : "!bg-red-500"
-              } border border-white`}
+              className={`relative inline-flex rounded-full h-2 w-2 ${isSaved ? "!bg-green-500" : "!bg-red-500"
+                } border border-white`}
             ></span>
           </span>
 
@@ -141,28 +139,15 @@ const Navbar: React.FC<NavbarProps> = ({
             >
               Save
             </button>
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="autoSave"
-                checked={autoSave}
-                onChange={onToggleAutoSave}
-                className="cursor-pointer"
-              />
-              <label htmlFor="autoSave" className="cursor-pointer select-none">
-                Auto Save
-              </label>
-            </div>
           </div>
 
           <div className="relative">
             <button
               onClick={toggleMusicPlayer}
-              className={`cursor-pointer transition-all duration-300 p-2 rounded-full ${
-                showMusicPlayer
-                  ? "bg-[var(--accent-color)] text-white"
-                  : "hover:bg-[var(--hover-bg)] hover:opacity-70"
-              }`}
+              className={`cursor-pointer transition-all duration-300 p-2 rounded-full ${showMusicPlayer
+                ? "bg-[var(--accent-color)] text-white"
+                : "hover:bg-[var(--hover-bg)] hover:opacity-70"
+                }`}
             >
               <SlEarphones size={17} />
             </button>
@@ -174,6 +159,17 @@ const Navbar: React.FC<NavbarProps> = ({
       {showMusicPlayer && (
         <MusicPlayer onClose={() => setShowMusicPlayer(false)} />
       )}
+
+      {showSettings && (
+        <SettingsPanel
+          theme={theme}
+          setTheme={setTheme}
+          autosave={autoSave}
+          setAutosave={onToggleAutoSave}
+          onClose={() => setShowSettings(false)}
+        />
+      )}
+
     </>
   );
 };
