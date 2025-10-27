@@ -83,13 +83,15 @@ function App() {
       localStorage.setItem("font", appState.font);
       localStorage.setItem("fontSize", appState.fontSize.toString());
       localStorage.setItem("editorContent", appState.editorContent);
-      console.log("Effect", JSON.parse(JSON.stringify(appState)));
-      if (saveTimeoutRef.current !== null) {
-        clearTimeout(saveTimeoutRef.current);
+
+      if (currentFileName) {
+        if (saveTimeoutRef.current !== null) {
+          clearTimeout(saveTimeoutRef.current);
+        }
+        saveTimeoutRef.current = setTimeout(() => {
+          handleSave();
+        }, 1000);
       }
-      saveTimeoutRef.current = setTimeout(() => {
-        handleSave();
-      }, 1000);
     } catch (error) {
       console.error("Error saving preferences:", error);
     }
@@ -98,7 +100,7 @@ function App() {
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [appState]);
+  }, [appState, currentFileName]);
 
   // State updaters
   const setTheme = useCallback(
