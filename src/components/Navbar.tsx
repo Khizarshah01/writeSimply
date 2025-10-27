@@ -11,6 +11,8 @@ interface NavbarProps {
   currentFileName: string | null;
   isSaved: boolean;
   onRename: (newName: string) => void;
+  autoSave: boolean;
+  onToggleAutoSave: () => void;
 }
 
 const Navbar: React.FC<NavbarProps> = ({
@@ -20,6 +22,8 @@ const Navbar: React.FC<NavbarProps> = ({
   currentFileName,
   isSaved,
   onRename,
+  autoSave,
+  onToggleAutoSave,
 }) => {
   const [showMusicPlayer, setShowMusicPlayer] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -130,12 +134,26 @@ const Navbar: React.FC<NavbarProps> = ({
 
         {/* Right: Save button + Music */}
         <div className="flex items-center gap-6">
-          <button
-            onClick={() => onSave()}
-            className="cursor-pointer hover:opacity-50 transition-opacity px-3 py-1 border-[var(--text-color)]"
-          >
-            Save
-          </button>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => onSave()}
+              className="cursor-pointer hover:opacity-50 transition-opacity px-3 py-1 border-[var(--text-color)]"
+            >
+              Save
+            </button>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="autoSave"
+                checked={autoSave}
+                onChange={onToggleAutoSave}
+                className="cursor-pointer"
+              />
+              <label htmlFor="autoSave" className="cursor-pointer select-none">
+                Auto Save
+              </label>
+            </div>
+          </div>
 
           <div className="relative">
             <button

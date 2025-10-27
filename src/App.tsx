@@ -22,6 +22,7 @@ interface AppState {
   font: string;
   fontSize: number;
   editorContent: string;
+  autoSave: boolean;
 }
 
 const DEFAULT_THEME = "light";
@@ -35,11 +36,13 @@ function App() {
       const savedFont = localStorage.getItem("font");
       const savedFontSize = localStorage.getItem("fontSize");
       const savedContent = localStorage.getItem("editorContent");
+      const savedAutoSave = localStorage.getItem("autoSave");
       return {
         theme: savedTheme || DEFAULT_THEME,
         font: savedFont || DEFAULT_FONT,
         fontSize: savedFontSize ? parseInt(savedFontSize) : DEFAULT_FONT_SIZE,
         editorContent: savedContent || "",
+        autoSave: savedAutoSave === "true",
       };
     } catch (error) {
       console.error("Error loading saved preferences:", error);
@@ -48,6 +51,7 @@ function App() {
         font: DEFAULT_FONT,
         fontSize: DEFAULT_FONT_SIZE,
         editorContent: "",
+        autoSave: false,
       };
     }
   });
@@ -83,8 +87,9 @@ function App() {
       localStorage.setItem("font", appState.font);
       localStorage.setItem("fontSize", appState.fontSize.toString());
       localStorage.setItem("editorContent", appState.editorContent);
+      localStorage.setItem("autoSave", appState.autoSave.toString());
 
-      if (currentFileName) {
+      if (currentFileName && appState.autoSave) {
         if (saveTimeoutRef.current !== null) {
           clearTimeout(saveTimeoutRef.current);
         }
@@ -116,6 +121,11 @@ function App() {
     [],
   );
 
+  const toggleAutoSave = useCallback(
+    () => setAppState((prev) => ({ ...prev, autoSave: !prev.autoSave })),
+    [],
+  );
+
   // Track editor changes and mark unsaved
   const setEditorContent = useCallback((content: string) => {
     setAppState((prev) => ({ ...prev, editorContent: content }));
@@ -133,7 +143,7 @@ function App() {
   }, []);
 
   // Save session to file
-  const handleSave = useCallback(async () => {
+  const handleSave = useCallback(async (isManual = false) => {
     try {
       let fileName = currentFileName;
 
@@ -153,7 +163,9 @@ function App() {
 
       const result = await invoke<string>("save_file", { file });
       console.log("Save result:", result);
-      addNotification("success", "File saved successfully!");
+      if (isManual) {
+        addNotification("success", "File saved successfully!");
+      }
       setIsSaved(true);
       refreshFileList();
     } catch (error) {
@@ -232,10 +244,12 @@ function App() {
       <Navbar
         theme={appState.theme}
         setTheme={setTheme}
-        onSave={handleSave}
+        onSave={() => handleSave(true)}
         currentFileName={currentFileName}
         isSaved={isSaved}
         onRename={handleRename}
+        autoSave={appState.autoSave}
+        onToggleAutoSave={toggleAutoSave}
       />
 
       <Editor
