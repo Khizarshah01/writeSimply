@@ -1,5 +1,7 @@
 import { Moon, Sun, Save, FileDown, Image, Type, Bot } from "lucide-react";
 import { RxCross2 } from "react-icons/rx";
+import { useOnClickOutside } from "../hooks/useClickOutside";
+import { useRef } from "react";
 
 interface SettingsPanelProps {
   theme: string;
@@ -16,11 +18,20 @@ export default function SettingsPanel({
   setAutosave,
   onClose,
 }: SettingsPanelProps) {
+  const settingsPanelRef = useRef<HTMLDivElement>(null);
+  useOnClickOutside(settingsPanelRef, onClose);
+
   return (
-    <div className="fixed top-20 left-8 md:right-16 lg:right-32 xl:right-40 z-50 w-80 bg-black/90 backdrop-blur-md rounded-xl p-6 shadow-2xl border border-white/20 text-white">
+    <div
+      ref={settingsPanelRef}
+      className="fixed top-20 left-8 md:right-16 lg:right-32 xl:right-40 z-50 w-80 bg-black/90 backdrop-blur-md rounded-xl p-6 shadow-2xl border border-white/20 text-white"
+    >
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-bold">Settings</h3>
-        <button onClick={onClose} className="text-white/70 hover:text-white transition-colors">
+        <button
+          onClick={onClose}
+          className="text-white/70 hover:text-white transition-colors"
+        >
           <RxCross2 size={20} />
         </button>
       </div>
@@ -34,7 +45,9 @@ export default function SettingsPanel({
         <button
           onClick={() => setTheme(theme === "light" ? "dark" : "light")}
           className={`px-3 py-1 rounded-md ${
-            theme === "light" ? "bg-gray-200 text-black" : "bg-gray-700 text-white"
+            theme === "light"
+              ? "bg-gray-200 text-black"
+              : "bg-gray-700 text-white"
           }`}
         >
           {theme === "light" ? "Light" : "Dark"}
