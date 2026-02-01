@@ -4,7 +4,7 @@ import { getCurrentWindow } from '@tauri-apps/api/window';
 
 
 // Constants
-const FONTS = ["Serif", "Sans-serif", "Monospace"] as const;
+const FONTS = ["Serif", "Monospace"] as const;
 const RANDOM_FONTS = [
   "Cursive", "Verdana", "Georgia", "Courier New", "Ubuntu", "Ubuntu Mono"
 ] as const;
@@ -39,7 +39,7 @@ const FooterPanel: React.FC<FooterPanelProps> = ({
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Clamp values between min and max
-  const clamp = (value: number, min: number, max: number) => 
+  const clamp = (value: number, min: number, max: number) =>
     Math.max(min, Math.min(max, value));
 
   // Font size handlers
@@ -55,16 +55,16 @@ const FooterPanel: React.FC<FooterPanelProps> = ({
     setFont(randomFont);
   }, [setFont]);
 
-const toggleFullScreen = async () => {
-  const window = await getCurrentWindow();
-  console.log("Window:", window); // should not be undefined
+  const toggleFullScreen = async () => {
+    const window = await getCurrentWindow();
+    console.log("Window:", window); // should not be undefined
 
-  const isFullscreen = await window.isFullscreen();
-  console.log("Was fullscreen:", isFullscreen);
+    const isFullscreen = await window.isFullscreen();
+    console.log("Was fullscreen:", isFullscreen);
 
-  await window.setFullscreen(!isFullscreen);
-  console.log("Now fullscreen:", !isFullscreen);
-};
+    await window.setFullscreen(!isFullscreen);
+    console.log("Now fullscreen:", !isFullscreen);
+  };
 
 
   // Timer logic
@@ -82,6 +82,11 @@ const toggleFullScreen = async () => {
             clearInterval(intervalRef.current!);
             setIsRunning(false);
             if (setTimer) setTimer(0);
+
+            // Play notification sound
+            const audio = new Audio("/ding.mp3");
+            audio.play().catch(e => console.error("Error playing sound:", e));
+
             return 0;
           }
           return prev - 1;
@@ -125,7 +130,7 @@ const toggleFullScreen = async () => {
       {/* Left: Font controls */}
       <div className="flex items-center gap-6">
         {/* Font size with scroll only */}
-        <div 
+        <div
           onWheel={handleFontScroll}
           className="cursor-pointer select-none min-w-[3rem] text-center hover:opacity-50 transition-opacity"
           title="Scroll to change font size"
@@ -138,9 +143,8 @@ const toggleFullScreen = async () => {
           {FONTS.map((f) => (
             <p
               key={f}
-              className={`cursor-pointer select-none hover:opacity-50 transition-opacity ${
-                f === font ? "font-bold underline" : ""
-              }`}
+              className={`cursor-pointer select-none hover:opacity-50 transition-opacity ${f === font ? "font-bold underline" : ""
+                }`}
               onClick={() => setFont(f)}
             >
               {f}
@@ -175,14 +179,14 @@ const toggleFullScreen = async () => {
           </p>
           <span className="opacity-50">•</span>
           <p className="cursor-pointer hover:opacity-50 transition-opacity"
-          onClick={toggleFullScreen}
+            onClick={toggleFullScreen}
           >Full Screen</p>
           <span className="opacity-50">•</span>
-          <p 
+          <p
             className="cursor-pointer hover:opacity-50 transition-opacity"
             onClick={onShowHistory}
           >
-           <GoHistory size={18} />
+            <GoHistory size={18} />
           </p>
         </div>
       </div>
