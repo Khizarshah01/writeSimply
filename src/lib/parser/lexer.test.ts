@@ -3,28 +3,53 @@ import { Lexer } from './lexer';
 import { TokenType } from './types';
 
 describe('Lexer', () => {
-    it('should recognize just a bold marker', () => {
-        const input = "*";
-        const lexer = new Lexer(input);
+    it('should recognize a single marker *', () => {
+        const lexer = new Lexer("*");
 
-        // Should get a BOLD token
         const token = lexer.nextToken();
-        expect(token.type).toBe(TokenType.BOLD);
+        expect(token.type).toBe(TokenType.MARKER);
         expect(token.value).toBe("*");
     });
 
-    it('should recognize nested bold italic *_Hello_*', () => {
-        const input = "*_Hello_*";
+
+    it('should tokenize markers and text correctly', () => {
+        const input = "*_~Hello~_*";
         const lexer = new Lexer(input);
 
-        expect(lexer.nextToken().type).toBe(TokenType.BOLD);   // *
-        expect(lexer.nextToken().type).toBe(TokenType.ITALIC); // _
+        expect(lexer.nextToken()).toMatchObject({
+            type: TokenType.MARKER,
+            value: "*"
+        });
+
+        expect(lexer.nextToken()).toMatchObject({
+            type: TokenType.MARKER,
+            value: "_"
+        });
+
+        expect(lexer.nextToken()).toMatchObject({
+            type: TokenType.MARKER,
+            value: "~"
+        });
 
         const textToken = lexer.nextToken();
-        expect(textToken.type).toBe(TokenType.TEXT);           // Hello
+        expect(textToken.type).toBe(TokenType.TEXT);
         expect(textToken.value).toBe("Hello");
 
-        expect(lexer.nextToken().type).toBe(TokenType.ITALIC); // _
-        expect(lexer.nextToken().type).toBe(TokenType.BOLD);   // *
+        expect(lexer.nextToken()).toMatchObject({
+            type: TokenType.MARKER,
+            value: "~"
+        });
+
+        expect(lexer.nextToken()).toMatchObject({
+            type: TokenType.MARKER,
+            value: "_"
+        });
+
+        expect(lexer.nextToken()).toMatchObject({
+            type: TokenType.MARKER,
+            value: "*"
+        });
+
+        expect(lexer.nextToken().type).toBe(TokenType.EOF);
     });
 });

@@ -1,53 +1,59 @@
 import { Token, TokenType } from "./types";
 
-export class Lexer {
-    private input: string;
-    private position: number;
+const MARKERS = new Set(['*', '_', '`', '~']);
 
-    constructor(input: string) {
-        this.input = input;
-        this.position = 0;
-    }
+export class Lexer {
+    private position = 0;
+
+    constructor(private input: string) { }
 
     public nextToken(): Token {
-        // 1. Check for End Of File
+        // EOF
         if (this.position >= this.input.length) {
             return { type: TokenType.EOF, value: "", position: this.position };
         }
 
         const char = this.input[this.position];
 
-        // 2. Check for Bold Marker '*'
-        if (char === '*') {
-            this.position++;
-            return { type: TokenType.BOLD, value: "*", position: this.position - 1 };
+        // check multi character marker (~~, **, __)
+        if (MARKERS.has(char) && this.peek() === char) {
+            const start = this.position;
+            this.position += 2;
+            return {
+                type: TokenType.MARKER,
+                value: char + char,
+                position: start
+            };
         }
 
-        // Check for Italic Marker '_'
-        if (char === '_') {
+        // check single character marker (*, _, `)
+        if (MARKERS.has(char)) {
+            const start = this.position;
             this.position++;
-            return { type: TokenType.ITALIC, value: "_", position: this.position - 1 };
+            return {
+                type: TokenType.MARKER,
+                value: char,
+                position: start
+            };
         }
 
-        // Check for Code Marker '`'
-        if (char === '`') {
-            this.position++;
-            return { type: TokenType.CODE, value: "`", position: this.position - 1 };
-        }
-
-        // 3. TODO: Check for Text
-        // Hint: Loop until you hit a special char
-        let textValue = "";
-
-        while (this.position < this.input.length) {
-            const currentChar = this.input[this.position];
-            if (currentChar === '*' || currentChar === '_' || currentChar === '`') {
-                break; // Stop if we hit a marker
-            }
-            textValue += currentChar;
+        // Text
+        const start = this.position;
+        while (
+            this.position < this.input.length &&
+            !MARKERS.has(this.input[this.position])
+        ) {
             this.position++;
         }
 
-        return { type: TokenType.TEXT, value: textValue, position: this.position - textValue.length };
+        return {
+            type: TokenType.TEXT,
+            value: this.input.slice(start, this.position),
+            position: start
+        };
+    }
+
+    private peek(offset = 1): string {
+        return this.input[this.position + offset];
     }
 }
