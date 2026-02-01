@@ -34,6 +34,11 @@ fn save_file(app_handle: AppHandle, file: WritingFile) -> Result<String, String>
     let user_folder = get_user_folder(app_handle)?;
     let file_path = user_folder.join(format!("{}.json", file.name));
 
+    // Ensure parent directory exists
+    if let Some(parent) = file_path.parent() {
+        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+
     let serialized = serde_json::to_string(&file).map_err(|e| e.to_string())?;
     fs::write(&file_path, serialized).map_err(|e| e.to_string())?;
 
@@ -57,32 +62,81 @@ fn load_file(app_handle: AppHandle, name: String) -> Result<WritingFile, String>
     Ok(writing_file)
 }
 
-#[tauri::command]
-fn list_files(app_handle: AppHandle) -> Result<Vec<String>, String> {
-    let user_folder = get_user_folder(app_handle)?;
-    let mut file_names = Vec::new();
-
-    for entry in fs::read_dir(user_folder).map_err(|e| e.to_string())? {
-        let entry = entry.map_err(|e| e.to_string())?;
-        if let Some(name) = entry.path().file_stem() {
-            file_names.push(name.to_string_lossy().to_string());
+fn list_files_recursive(dir: &PathBuf, base_dir: &PathBuf) -> Result<Vec<String>, String> {
+    let mut files = Vec::new();
+    if dir.is_dir() {
+        for entry in fs::read_dir(dir).map_err(|e| e.to_string())? {
+            let entry = entry.map_err(|e| e.to_string())?;
+            let path = entry.path();
+            if path.is_dir() {
+                if let Ok(relative) = path.strip_prefix(base_dir) {
+                     let path_str = relative.to_string_lossy().replace("\\", "/");
+                     files.push(format!("{}/", path_str));
+                }
+                files.extend(list_files_recursive(&path, base_dir)?);
+            } else {
+                if let Some(extension) = path.extension() {
+                     if extension == "json" {
+                        if let Ok(relative) = path.strip_prefix(base_dir) {
+                            if let Some(stem) = relative.file_stem() {
+                                 // We need to reconstruct the path with the name but without extension for the command interface
+                                 // actually, let's return the full relative path without extension
+                                 // e.g. "folder/note"
+                                 let parent = relative.parent().unwrap_or(std::path::Path::new("")).to_string_lossy();
+                                 let name = stem.to_string_lossy();
+                                 if parent.is_empty() {
+                                     files.push(name.to_string());
+                                 } else {
+                                     files.push(format!("{}/{}", parent, name));
+                                 }
+                            }
+                        }
+                     }
+                }
+            }
         }
     }
-
-    Ok(file_names)
+    Ok(files)
 }
 
 #[tauri::command]
-fn delete_file(app_handle: AppHandle, name: String) -> Result<String, String> {
+fn list_files(app_handle: AppHandle) -> Result<Vec<String>, String> {
     let user_folder = get_user_folder(app_handle)?;
-    let file_path = user_folder.join(format!("{}.json", name));
+    list_files_recursive(&user_folder, &user_folder)
+}
 
+#[tauri::command]
+fn create_folder(app_handle: AppHandle, name: String) -> Result<String, String> {
+    let user_folder = get_user_folder(app_handle)?;
+    let folder_path = user_folder.join(&name);
+
+    if folder_path.exists() {
+         return Err("Folder already exists".into());
+    }
+
+    fs::create_dir_all(&folder_path).map_err(|e| e.to_string())?;
+    Ok(format!("Folder '{}' created successfully!", name))
+}
+
+#[tauri::command]
+fn delete_item(app_handle: AppHandle, name: String) -> Result<String, String> {
+    let user_folder = get_user_folder(app_handle)?;
+    // Check if it's a file (with .json)
+    let file_path = user_folder.join(format!("{}.json", name));
+    
     if file_path.exists() {
         fs::remove_file(file_path).map_err(|e| e.to_string())?;
-        Ok(format!("File '{}' deleted successfully!", name))
-    } else {
-        Err("File not found".into())
+        return Ok(format!("File '{}' deleted successfully!", name));
     }
+
+    // Check if it's a directory (raw name)
+    let dir_path = user_folder.join(&name);
+    if dir_path.exists() && dir_path.is_dir() {
+         fs::remove_dir_all(dir_path).map_err(|e| e.to_string())?;
+         return Ok(format!("Folder '{}' deleted successfully!", name));
+    }
+
+    Err("Item not found".into())
 }
 
 struct AudioState {
@@ -172,7 +226,8 @@ pub fn run() {
             save_file,
             load_file,
             list_files,
-            delete_file,
+            create_folder,
+            delete_item,
             play_audio,
             stop_audio,
             is_audio_playing
