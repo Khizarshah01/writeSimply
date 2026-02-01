@@ -1,6 +1,7 @@
 import { Token, TokenType } from "./types";
 
 const MARKERS = new Set(['*', '_', '`', '~']);
+// i see to optimize even more. we can use Character Code Comparison Instead of Set Lookup
 
 export class Lexer {
     private position = 0;
@@ -8,7 +9,6 @@ export class Lexer {
     constructor(private input: string) { }
 
     public nextToken(): Token {
-        // EOF
         if (this.position >= this.input.length) {
             return { type: TokenType.EOF, value: "", position: this.position };
         }
@@ -57,3 +57,5 @@ export class Lexer {
         return this.input[this.position + offset];
     }
 }
+
+// Batch Character Scanning improve performance like code = 42 = *  use ascii number to compare instead of set lookup,
