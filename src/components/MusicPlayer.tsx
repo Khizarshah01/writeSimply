@@ -34,35 +34,20 @@ export default function MusicPlayer({ onClose }: MusicPlayerProps) {
   const [isLoading, setIsLoading] = useState(false);
 
 
-  // 🎵 Select and load music folder using Tauri
-  const handleSelectFolder = async () => {
+
+  const scanFolder = async (path: string) => {
     try {
       setIsLoading(true);
-      
-      const selected = await open({
-        directory: true,
-        multiple: false,
-        title: "Select your music folder",
-      });
-
-      if (!selected || Array.isArray(selected)) {
-        await message("No folder selected.", { title: "Music Player", kind: "info" });
-        setIsLoading(false);
-        return;
-      }
-
-      setFolderPath(selected);
-      console.log("Selected folder:", selected);
+      console.log("Scanning folder:", path);
 
       // Read directory entries
-      const entries = await readDir(selected);
+      const entries = await readDir(path);
       console.log("Folder entries:", entries);
 
       // Filter audio files
       const audioFiles = entries.filter((entry: any) => {
         const name = entry.name || entry.path?.split(/[\\/]/).pop() || '';
         const isAudioFile = /\.(mp3|wav|ogg|m4a|flac|aac)$/i.test(name);
-        console.log("Checking file:", name, "is audio:", isAudioFile);
         return isAudioFile;
       });
 
@@ -74,27 +59,64 @@ export default function MusicPlayer({ onClose }: MusicPlayerProps) {
           kind: "warning",
         });
         setIsLoading(false);
-        return;
+        return false;
       }
 
       // Create song objects
       const loadedSongs: Song[] = await Promise.all(
         audioFiles.map(async (entry: any) => {
-          const path = entry.path || `${selected}/${entry.name}`;
-          const name = entry.name || await basename(path).catch(() => 'Unknown');
+          const songPath = entry.path || `${path}/${entry.name}`;
+          const name = entry.name || await basename(songPath).catch(() => 'Unknown');
           const cleanName = name.replace(/\.[^/.]+$/, ""); // Remove file extension
-          
+
           return {
             name: cleanName,
-            path: path,
+            path: songPath,
           };
         })
       );
 
       console.log("Loaded songs:", loadedSongs);
       setSongs(loadedSongs);
-      setCurrentSongIndex(0);
-      setIsPlaying(false);
+      setFolderPath(path);
+
+      // Save to localStorage
+      localStorage.setItem("music_folder_path", path);
+
+      return true;
+
+    } catch (error) {
+      console.error("Folder scanning failed:", error);
+      // Only show error if we are actively selecting, not on auto-load
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 🎵 Select and load music folder using Tauri
+  const handleSelectFolder = async () => {
+    try {
+      const selected = await open({
+        directory: true,
+        multiple: false,
+        title: "Select your music folder",
+      });
+
+      if (!selected || Array.isArray(selected)) {
+        return;
+      }
+
+      const success = await scanFolder(selected);
+      if (success) {
+        setCurrentSongIndex(0);
+        setIsPlaying(false);
+      } else {
+        await message(`Could not load files from ${selected}.`, {
+          title: "Error",
+          kind: "error",
+        });
+      }
 
     } catch (error) {
       console.error("Folder selection failed:", error);
@@ -102,10 +124,26 @@ export default function MusicPlayer({ onClose }: MusicPlayerProps) {
         title: "Error",
         kind: "error",
       });
-    } finally {
-      setIsLoading(false);
     }
   };
+
+  // Load persisted folder on mount
+  useEffect(() => {
+    const savedPath = localStorage.getItem("music_folder_path");
+    if (savedPath) {
+      // Don't auto-scan on every render, only once on mount
+      if (!folderPath) {
+        scanFolder(savedPath).then(success => {
+          if (!success) {
+            console.log("Failed to load saved path, clearing localStorage");
+            localStorage.removeItem("music_folder_path");
+            setFolderPath(null);
+          }
+        });
+      }
+    }
+  }, []);
+
 
   // Check if audio is still playing
   const checkAudioStatus = async () => {
@@ -129,7 +167,7 @@ export default function MusicPlayer({ onClose }: MusicPlayerProps) {
       await invoke('play_audio', { path });
       setIsPlaying(true);
       console.log("Playing:", path);
-      
+
       // Start progress simulation
       startProgressSimulation();
     } catch (error) {
@@ -161,7 +199,7 @@ export default function MusicPlayer({ onClose }: MusicPlayerProps) {
         clearInterval(interval);
         return;
       }
-      
+
       progressValue += 0.5;
       if (progressValue >= 100) {
         progressValue = 100;
@@ -173,10 +211,10 @@ export default function MusicPlayer({ onClose }: MusicPlayerProps) {
   // Handle next song (with completion)
   const handleNextSong = () => {
     if (songs.length === 0) return;
-    
+
     const nextIndex = currentSongIndex + 1 < songs.length ? currentSongIndex + 1 : 0;
     setCurrentSongIndex(nextIndex);
-    
+
     // Auto-play next song if repeat is enabled or if we're not at the end
     if (isPlaying && (isRepeat || nextIndex !== 0)) {
       setTimeout(async () => {
@@ -208,15 +246,15 @@ export default function MusicPlayer({ onClose }: MusicPlayerProps) {
   // Handle next song (user action)
   const handleNext = async () => {
     if (songs.length === 0) return;
-    
+
     const wasPlaying = isPlaying;
     if (wasPlaying) {
       await stopAudio();
     }
-    
+
     const nextIndex = currentSongIndex + 1 < songs.length ? currentSongIndex + 1 : 0;
     setCurrentSongIndex(nextIndex);
-    
+
     if (wasPlaying) {
       setTimeout(async () => {
         await playAudio(songs[nextIndex].path);
@@ -227,15 +265,15 @@ export default function MusicPlayer({ onClose }: MusicPlayerProps) {
   // Handle previous song
   const handlePrev = async () => {
     if (songs.length === 0) return;
-    
+
     const wasPlaying = isPlaying;
     if (wasPlaying) {
       await stopAudio();
     }
-    
+
     const prevIndex = currentSongIndex - 1 >= 0 ? currentSongIndex - 1 : songs.length - 1;
     setCurrentSongIndex(prevIndex);
-    
+
     if (wasPlaying) {
       setTimeout(async () => {
         await playAudio(songs[prevIndex].path);
@@ -344,21 +382,21 @@ export default function MusicPlayer({ onClose }: MusicPlayerProps) {
           {/* Controls */}
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <button 
+              <button
                 onClick={handlePrev}
                 className="text-white hover:scale-110 transition-transform p-1"
                 disabled={songs.length === 0}
               >
                 <SkipBack size={18} />
               </button>
-              <button 
+              <button
                 onClick={handlePlayPause}
                 className="text-white hover:scale-110 transition-transform p-2 bg-white/20 rounded-full"
                 disabled={songs.length === 0}
               >
                 {isPlaying ? <Pause size={16} /> : <Play size={16} />}
               </button>
-              <button 
+              <button
                 onClick={handleNext}
                 className="text-white hover:scale-110 transition-transform p-1"
                 disabled={songs.length === 0}
@@ -403,11 +441,10 @@ export default function MusicPlayer({ onClose }: MusicPlayerProps) {
                       }, 500);
                     }
                   }}
-                  className={`flex items-center p-2 rounded cursor-pointer transition-colors ${
-                    index === currentSongIndex 
-                      ? 'bg-green-500/30 text-white' 
-                      : 'text-white/80 hover:bg-white/10'
-                  }`}
+                  className={`flex items-center p-2 rounded cursor-pointer transition-colors ${index === currentSongIndex
+                    ? 'bg-green-500/30 text-white'
+                    : 'text-white/80 hover:bg-white/10'
+                    }`}
                 >
                   <div className="flex-1 min-w-0">
                     <p className="text-sm truncate">

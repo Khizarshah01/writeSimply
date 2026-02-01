@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import MusicPlayer from "./MusicPlayer";
+
 import { SlEarphones } from "react-icons/sl";
 import { IoSettingsOutline } from "react-icons/io5";
 import { invoke } from "@tauri-apps/api/core";
@@ -10,6 +11,7 @@ interface NavbarProps {
   theme: string;
   setTheme: (theme: string) => void;
   onSave: () => void;
+  onPrint: () => void;
   currentFileName: string | null;
   isSaved: boolean;
   onRename: (newName: string) => void;
@@ -21,6 +23,7 @@ const Navbar: React.FC<NavbarProps> = ({
   theme,
   setTheme,
   onSave,
+  onPrint,
   currentFileName,
   isSaved,
   onRename,
@@ -58,8 +61,6 @@ const Navbar: React.FC<NavbarProps> = ({
     }
   }, [isEditing]);
 
-  // Update editName when currentFileName changes
-
   const handleNameSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (editName.trim() && editName !== currentFileName) {
@@ -88,7 +89,6 @@ const Navbar: React.FC<NavbarProps> = ({
   return (
     <>
       <nav className="flex justify-between items-center px-8 py-4 select-none relative">
-        {/* Left: Theme toggle */}
         <div
           onClick={() => setShowSettings(!showSettings)}
           className="cursor-pointer hover:opacity-50 transition-opacity flex items-center gap-2"
@@ -130,7 +130,7 @@ const Navbar: React.FC<NavbarProps> = ({
           </form>
         </div>
 
-        {/* Right: Save button + Music */}
+        {/* Right: Actions */}
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-4">
             <button
@@ -156,9 +156,10 @@ const Navbar: React.FC<NavbarProps> = ({
       </nav>
 
       {/* Music Player Widget */}
-      {showMusicPlayer && (
+      {/* Music Player Widget - Always mounted for background play, controlled via visibility */}
+      <div className={showMusicPlayer ? "block" : "hidden"}>
         <MusicPlayer onClose={() => setShowMusicPlayer(false)} />
-      )}
+      </div>
 
       {showSettings && (
         <SettingsPanel
@@ -166,6 +167,7 @@ const Navbar: React.FC<NavbarProps> = ({
           setTheme={setTheme}
           autosave={autoSave}
           setAutosave={onToggleAutoSave}
+          onPrint={onPrint}
           onClose={() => setShowSettings(false)}
         />
       )}

@@ -9,12 +9,12 @@ interface EditorProps {
   onContentChange?: (content: string) => void;
 }
 
-const Editor: React.FC<EditorProps> = ({ 
-  font, 
-  fontSize, 
-  theme, 
-  content = "", 
-  onContentChange 
+const Editor: React.FC<EditorProps> = ({
+  font,
+  fontSize,
+  theme,
+  content = "",
+  onContentChange
 }) => {
   const [placeholder, setPlaceholder] = useState<string>("");
   const [localContent, setLocalContent] = useState<string>(content);
@@ -77,13 +77,13 @@ const Editor: React.FC<EditorProps> = ({
   };
 
   return (
-  <div className="flex-1 flex justify-center items-center px-4 overflow-hidden">
-    <textarea
-      ref={textareaRef}
-      value={localContent}
-      onChange={handleChange}
-      onKeyDown={handleKeyDown}
-      className={`
+    <div className="flex-1 flex justify-center items-center px-4 overflow-hidden">
+      <textarea
+        ref={textareaRef}
+        value={localContent}
+        onChange={handleChange}
+        onKeyDown={handleKeyDown}
+        className={`
         w-full max-w-4xl h-full p-8 
         leading-relaxed resize-none 
         border-none outline-none 
@@ -91,17 +91,29 @@ const Editor: React.FC<EditorProps> = ({
         caret-blue transition-all duration-300
         placeholder-gray-500
       `}
-      style={{
-        fontFamily: font,
-        fontSize: `${fontSize}px`,
-        lineHeight: "1.6",
-        scrollbarWidth: "none",
-        msOverflowStyle: "none",
-      }}
-      placeholder={placeholder}
-      spellCheck={false}
-    />
-  </div>
+        style={{
+          fontFamily: font,
+          fontSize: `${fontSize}px`,
+          lineHeight: "1.6",
+          scrollbarWidth: "none",
+          msOverflowStyle: "none",
+        }}
+        placeholder={placeholder}
+        spellCheck={false}
+      />
+
+      {/* Print View: Visible only when printing */}
+      <div
+        className="print-only"
+        style={{
+          fontFamily: font,
+          fontSize: `${fontSize}px`,
+          lineHeight: "1.6",
+        }}
+      >
+        {localContent}
+      </div>
+    </div>
   );
 };
 

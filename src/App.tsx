@@ -5,8 +5,9 @@ import "./App.css";
 import Editor from "./components/Editor";
 import FooterPanel from "./components/FooterPanel";
 import Navbar from "./components/Navbar";
-import HistoryPanel from "./components/HistoryPanel";
+import FileTreePanel from "./components/FileTreePanel";
 import NotificationContainer from "./components/NotificationContainer";
+import IntroAnimation from "./components/IntroAnimation";
 
 // Types for writing session
 interface WritingFile {
@@ -83,6 +84,11 @@ function App() {
   useEffect(() => {
     try {
       document.documentElement.dataset.theme = appState.theme;
+      if (appState.theme === "dark") {
+        document.documentElement.classList.add("dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+      }
       localStorage.setItem("theme", appState.theme);
       localStorage.setItem("font", appState.font);
       localStorage.setItem("fontSize", appState.fontSize.toString());
@@ -93,7 +99,7 @@ function App() {
         if (saveTimeoutRef.current !== null) {
           clearTimeout(saveTimeoutRef.current);
         }
-        saveTimeoutRef.current = setTimeout(() => {
+        saveTimeoutRef.current = window.setTimeout(() => {
           handleSave();
         }, 1000);
       }
@@ -199,16 +205,14 @@ function App() {
   const handleDeleteFile = useCallback(
     async (fileName: string) => {
       try {
-        if (confirm(`Are you sure you want to delete "${fileName}"?`)) {
-          await invoke<string>("delete_file", { name: fileName });
-          if (currentFileName === fileName) {
-            setCurrentFileName(null);
-            setIsSaved(true);
-            setEditorContent(""); // reset editor
-          }
-          refreshFileList();
-          addNotification("info", "File deleted successfully.");
+        await invoke<string>("delete_item", { name: fileName });
+        if (currentFileName === fileName) {
+          setCurrentFileName(null);
+          setIsSaved(true);
+          setEditorContent(""); // reset editor
         }
+        refreshFileList();
+        addNotification("info", "File deleted successfully.");
       } catch (error) {
         console.error("Error deleting file:", error);
         addNotification("error", "Error deleting file: " + String(error));
@@ -239,12 +243,23 @@ function App() {
     if (newName.trim() !== "") setCurrentFileName(newName);
   }, []);
 
+  const handlePrint = useCallback(() => {
+    window.print();
+  }, []);
+
+  const [showIntro, setShowIntro] = useState(true);
+
+  if (showIntro) {
+    return <IntroAnimation onComplete={() => setShowIntro(false)} />;
+  }
+
   return (
     <div className="app-container min-h-screen flex flex-col bg-[var(--background)] text-[var(--text-color)] transition-colors duration-300 relative">
       <Navbar
         theme={appState.theme}
         setTheme={setTheme}
         onSave={() => handleSave(true)}
+        onPrint={handlePrint}
         currentFileName={currentFileName}
         isSaved={isSaved}
         onRename={handleRename}
@@ -271,12 +286,13 @@ function App() {
       />
 
       {showHistory && (
-        <HistoryPanel
+        <FileTreePanel
           files={fileList}
           onLoadFile={handleLoadFile}
           onDeleteFile={handleDeleteFile}
           onClose={() => setShowHistory(false)}
           isOpen={showHistory}
+          refreshFiles={refreshFileList}
         />
       )}
       <NotificationContainer

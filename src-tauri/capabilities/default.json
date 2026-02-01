@@ -10,6 +10,7 @@
     "opener:default",
     "dialog:default",
     "fs:default",
-    "core:window:allow-set-fullscreen"
+    "core:window:allow-set-fullscreen",
+    "fs:allow-home-read-recursive"
   ]
 }
