@@ -48,7 +48,7 @@ const FloatingToolbar: React.FC<FloatingToolbarProps> = ({ onFormat, containerRe
             }
         };
 
-        const handleKeyUp = (e: KeyboardEvent) => {
+        const handleKeyUp = () => {
             // Hide on typing, show on Shift+Arrow? Complex without coordinates.
             // For now, let's just hiding on keypress ensures weird states don't happen.
             // Or we can check selection, but we lack coordinates.

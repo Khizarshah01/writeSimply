@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { Lexer } from './lexer';
 import { Parser } from './parser';
-import { RootNode, TextNode, StyleNode } from './types';
+import { TextNode, StyleNode } from './types';
 
 describe('Parser', () => {
     it('should parse simple text', () => {
@@ -40,7 +40,7 @@ describe('Parser', () => {
         const boldNode = ast.children[0] as StyleNode;
         expect(boldNode.style).toBe('BOLD');
 
-        const italicNode = boldNode.children[1] as StyleNode; // 0 might be space if lexer handles it, or explicit text? 
+
         // Wait, "Bold *Italic*" -> Text("Bold "), Marker(*), Text("Italic"), Marker(*).
         // Check children of Bold:
         // 1. TextNode "Bold "
