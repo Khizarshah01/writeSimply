@@ -11,3 +11,26 @@ export interface Token {
 }
 
 // so i can remove the position from the token currently there is now sense to store this but i research it. and it usefull in some cases let see..
+
+export type NodeType = 'ROOT' | 'TEXT' | 'STYLE';
+export type StyleType = 'BOLD' | 'ITALIC' | 'CODE' | 'STRIKETHROUGH';
+
+export interface Node {
+  type: NodeType;
+}
+
+export interface RootNode extends Node {
+  type: 'ROOT';
+  children: Node[];
+}
+
+export interface TextNode extends Node {
+  type: 'TEXT';
+  value: string;
+}
+
+export interface StyleNode extends Node {
+  type: 'STYLE';
+  style: StyleType;
+  children: Node[];
+}
