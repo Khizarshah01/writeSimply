@@ -46,17 +46,34 @@ export class Parser {
         const marker = this.currentToken.value;
         const currentHead = stack[stack.length - 1];
 
-        if (currentHead.type === 'STYLE' && this.getMarkerForStyle(currentHead.style) === marker) {
+        // Prepare marker node
+        const markerNode: import("./types").MarkerNode = {
+            type: 'MARKER',
+            value: marker
+        };
+
+        // 1. Check if Closing
+        // Use 'marker' property if available (for precise matching like * vs _), else fallback or strict match
+        // Since we re-added 'marker' property to StyleNode, we should use it.
+        const headAsStyle = currentHead as StyleNode;
+        if (currentHead.type === 'STYLE' && (headAsStyle.marker === marker || this.getMarkerForStyle(currentHead.style) === marker)) {
             stack.pop();
+            // Add closing marker to the *parent* node (the new head after popping)
+            const parent = stack[stack.length - 1];
+            parent.children.push(markerNode);
             this.eat(TokenType.MARKER);
             return;
         }
 
         const styleType = this.getStyleForMarker(marker);
         if (styleType) {
+            // Add opening marker to current parent
+            currentHead.children.push(markerNode);
+
             const newStyleNode: StyleNode = {
                 type: 'STYLE',
                 style: styleType,
+                marker: marker,
                 children: []
             };
 

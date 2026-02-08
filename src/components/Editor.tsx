@@ -4,7 +4,6 @@ import { Lexer } from "../lib/parser/lexer";
 import { Parser } from "../lib/parser/parser";
 import { renderAST } from "../lib/renderer";
 import { RootNode } from "../lib/parser/types";
-import FloatingToolbar from "./FloatingToolbar";
 
 interface EditorProps {
   font: string;
@@ -25,9 +24,9 @@ const Editor: React.FC<EditorProps> = ({
   const [localContent, setLocalContent] = useState<string>(content);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const editorContainerRef = useRef<HTMLDivElement>(null);
+  const previewRef = useRef<HTMLDivElement>(null);
 
-  // Split View State
-  const [isSplitView, setIsSplitView] = useState(false);
+
   const [ast, setAst] = useState<RootNode | null>(null);
 
   // Get random quote
@@ -65,12 +64,10 @@ const Editor: React.FC<EditorProps> = ({
 
   // Parse Content on Change
   useEffect(() => {
-    if (isSplitView) {
-      const lexer = new Lexer(localContent);
-      const parser = new Parser(lexer);
-      setAst(parser.parse());
-    }
-  }, [localContent, isSplitView]);
+    const lexer = new Lexer(localContent);
+    const parser = new Parser(lexer);
+    setAst(parser.parse());
+  }, [localContent]);
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newContent = e.target.value;
@@ -93,92 +90,116 @@ const Editor: React.FC<EditorProps> = ({
         textareaRef.current?.setSelectionRange(start + 2, start + 2);
       }, 0);
     }
-  };
 
-  const handleFormat = (format: 'bold' | 'italic' | 'view') => {
-    console.log("[Editor] handleFormat called with:", format);
-    console.log("[Editor] textarea ref:", textareaRef.current);
-    console.log("[Editor] selection:", textareaRef.current?.selectionStart, textareaRef.current?.selectionEnd);
+    // Auto-close for *
+    if (e.key === "*") {
+      const start = e.currentTarget.selectionStart ?? 0;
+      const end = e.currentTarget.selectionEnd ?? 0;
 
-    if (format === 'view') {
-      setIsSplitView(prev => !prev);
-      return;
+      // Only if cursor is collapsed (no selection)
+      if (start === end) {
+        const charBefore = localContent.charAt(start - 1);
+
+        // If user just typed one *, and now types another * -> **
+        // We want to turn it into **** with cursor in middle
+        if (charBefore === '*') {
+          e.preventDefault();
+          // Current: ...*|...
+          // Result: ...****|... (cursor at index + 2 relative to start)
+          // Wait, start is AFTER the first *.
+          // So we insert *** at cursor.
+          // String becomes ...****...
+
+          const newValue = localContent.substring(0, start) + "***" + localContent.substring(end);
+          setLocalContent(newValue);
+          onContentChange?.(newValue);
+
+          setTimeout(() => {
+            // Start was 1 (after first *). We added ***.
+            // We want cursor after 2nd *. So start + 1?
+            // * -> (insert ***) -> ****
+            // Indexes: 0 1 2 3
+            // Before: * (index 0), cursor at 1.
+            // After: ****. Cursor should be at 2.
+            // So start + 1.
+            textareaRef.current?.setSelectionRange(start + 1, start + 1);
+          }, 0);
+        }
+      }
     }
-
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    if (start === end) return; // No selection
-
-    const selectedsub = localContent.substring(start, end);
-    let wrapper = '';
-    if (format === 'bold') wrapper = '**';
-    if (format === 'italic') wrapper = '*';
-
-    const newValue = localContent.substring(0, start) + wrapper + selectedsub + wrapper + localContent.substring(end);
-
-    setLocalContent(newValue);
-    onContentChange?.(newValue);
-
-    setTimeout(() => {
-      textarea.focus();
-      textarea.setSelectionRange(start + wrapper.length, end + wrapper.length);
-    }, 0);
   };
 
   return (
     <div
       ref={editorContainerRef}
-      className="flex-1 flex justify-center items-center px-4 overflow-hidden relative"
+      className="flex-1 flex justify-center items-start px-4 overflow-hidden relative"
     >
-      <FloatingToolbar
-        onFormat={handleFormat}
-        containerRef={editorContainerRef}
-        isRawView={isSplitView}
-      />
-
-
       {/* Editor Pane */}
-      <div className={`transition-all duration-300 h-full ${isSplitView ? 'w-1/2 border-r border-gray-700' : 'w-full max-w-4xl'}`}>
-        <textarea
-          ref={textareaRef}
-          value={localContent}
-          onChange={handleChange}
-          onKeyDown={handleKeyDown}
+      <div className={`transition-all duration-300 h-full w-full max-w-4xl relative h-full`}
+        style={{
+          background: "var(--background)", // ✅ background lives HERE
+        }}
+      >
+        {/* Visual Layer - Behind */}
+        <div
+          ref={previewRef}
           className={`
             w-full h-full p-8 
-            leading-relaxed resize-none 
-            border-none outline-none 
-            bg-[var(--background)] text-[var(--text-color)]
-            caret-blue transition-all duration-300
-            placeholder-gray-500
+            leading-relaxed 
+            border-none 
+            bg-transparent
+            absolute inset-0
+            pointer-events-none
+            overflow-auto
           `}
           style={{
             fontFamily: font,
             fontSize: `${fontSize}px`,
             lineHeight: "1.6",
-            scrollbarWidth: "none",
-            msOverflowStyle: "none",
+            whiteSpace: "pre-wrap",
+            wordBreak: "break-word",
+            color: "var(--text-color)",
+          }}
+        >
+          {ast ? renderAST(ast, "preview-root") : localContent}
+        </div>
+
+        {/* Input Layer - Top */}
+        <textarea
+          ref={textareaRef}
+          value={localContent}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          onScroll={(e) => {
+            if (previewRef.current) {
+              previewRef.current.scrollTop = e.currentTarget.scrollTop;
+            }
+          }}
+          className={`
+    w-full h-full p-8 
+    leading-relaxed resize-none 
+    border-none outline-none 
+    bg-transparent
+    absolute inset-0
+    z-10
+    scrollbar-hide
+  `}
+          style={{
+            fontFamily: font,
+            fontSize: `${fontSize}px`,
+            lineHeight: "1.6",
+            whiteSpace: "pre-wrap",
+            wordBreak: "break-word",
+
+            color: "transparent",
+            WebkitTextFillColor: "transparent",
+            caretColor: theme === "dark" ? "white" : "black",
+            background: "rgba(255, 255, 255, 0.15)",
           }}
           placeholder={placeholder}
           spellCheck={false}
         />
       </div>
-
-      {/* Preview Pane (Split View) */}
-      {isSplitView && ast && (
-        <div
-          className="w-1/2 h-full p-8 overflow-y-auto prose dark:prose-invert max-w-none"
-          style={{
-            fontFamily: font,
-            // Usually markdown previews look better with sans/serif separation, but respecting user font
-          }}
-        >
-          {renderAST(ast, 'preview-root')}
-        </div>
-      )}
 
       {/* Print View: Visible only when printing */}
       <div
@@ -189,11 +210,8 @@ const Editor: React.FC<EditorProps> = ({
           lineHeight: "1.6",
         }}
       >
-        {isSplitView && ast ? renderAST(ast, 'print-root') : localContent}
+        {ast ? renderAST(ast, 'print-root') : localContent}
       </div>
-
-
-
     </div>
   );
 };

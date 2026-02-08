@@ -2,6 +2,7 @@
 @import "tw-animate-css";
 
 
+
 :root[data-theme="light"] {
   --background: #fdfcfb;
   --text-color: #222222;
@@ -234,4 +235,29 @@ body,
 ::view-transition-new(root) {
   animation: none;
   mix-blend-mode: normal;
+}
+
+.input {
+  position: relative;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.font-bold {
+  font-weight: bold;
+}
+
+.italic {
+  font-style: italic;
+}
+
+textarea::placeholder {
+  color: transparent !important;
 }

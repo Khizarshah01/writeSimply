@@ -34,5 +34,8 @@ export function renderAST(node: Node, key: string | number): React.ReactNode {
         }
     }
 
-    return null;
+    if (node.type === 'MARKER') {
+        const marker = node as import('./parser/types').MarkerNode;
+        return <span key={key} className="text-gray-300 pointer-events-none select-none">{marker.value}</span>;
+    }
 }
