@@ -1,7 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-@custom-variant dark (&:is(.dark *));
 
 :root[data-theme="light"] {
   --background: #fdfcfb;
@@ -18,26 +17,27 @@
   --text-color: #4b3f2f;
 }
 
-*{
+* {
   background-color: var(--background);
   color: var(--text-color);
 }
 
 /* In your global CSS file */
 .thick-cursor {
-  caret-width: 2px;
-  caret-color: #3b82f6; /* Optional: change cursor color */
+  caret-color: #3b82f6;
+  /* Optional: change cursor color */
 }
 
 .caret-blue {
   caret-color: #3b82f6;
-  caret-width: 2px;
 }
 
 .app-container {
   position: relative;
-  overflow: hidden; /* disable scrollbars */
-  height: 100vh;    /* full window height */
+  overflow: hidden;
+  /* disable scrollbars */
+  height: 100vh;
+  /* full window height */
   display: flex;
   flex-direction: column;
 }
@@ -48,7 +48,8 @@
 }
 
 .main-content.with-panel-open {
-  margin-right: 20rem; /* Adjust based on your panel width */
+  margin-right: 20rem;
+  /* Adjust based on your panel width */
 }
 
 /* Better overlay that doesn't block interactions completely */
@@ -62,6 +63,7 @@
     opacity: 0;
     transform: translateY(-10px) scale(0.95);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -84,7 +86,7 @@
   border-radius: 50%;
   background: white;
   cursor: pointer;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .slider::-moz-range-thumb {
@@ -94,15 +96,18 @@
   background: white;
   cursor: pointer;
   border: none;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 /* Make sure the overlay has proper styling */
 .fixed.inset-0 {
-  background: transparent; /* Or use a very light overlay */
+  background: transparent;
+  /* Or use a very light overlay */
 }
 
-html, body, #root {
+html,
+body,
+#root {
   height: 100%;
   margin: 0;
   padding: 0;
@@ -110,8 +115,13 @@ html, body, #root {
 }
 
 @media print {
+
   /* Hide non-printable elements */
-  nav, footer, .notification-container, button, .music-player-widget {
+  nav,
+  footer,
+  .notification-container,
+  button,
+  .music-player-widget {
     display: none !important;
   }
 
@@ -122,7 +132,9 @@ html, body, #root {
     display: block !important;
   }
 
-  html, body, #root {
+  html,
+  body,
+  #root {
     height: auto !important;
     overflow: visible !important;
     background-color: white !important;
@@ -147,47 +159,6 @@ html, body, #root {
 /* Hide print-only element on screen */
 .print-only {
   display: none;
-}
-
-@theme inline {
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --radius-2xl: calc(var(--radius) + 8px);
-  --radius-3xl: calc(var(--radius) + 12px);
-  --radius-4xl: calc(var(--radius) + 16px);
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
 }
 
 :root {
@@ -259,16 +230,8 @@ html, body, #root {
   --sidebar-ring: oklch(0.556 0 0);
 }
 
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
-}
-
-::view-transition-old(root), ::view-transition-new(root) {
-    animation: none;
-    mix-blend-mode: normal;
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
 }
