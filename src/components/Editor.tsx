@@ -151,6 +151,7 @@ const Editor: React.FC<EditorProps> = ({
             absolute inset-0
             pointer-events-none
             overflow-auto
+            scrollbar-hide
           `}
           style={{
             fontFamily: font,
@@ -212,7 +213,7 @@ const Editor: React.FC<EditorProps> = ({
       >
         {ast ? renderAST(ast, 'print-root') : localContent}
       </div>
-    </div>
+    </div >
   );
 };
 
