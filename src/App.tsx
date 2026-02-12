@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import "./App.css";
 
-import Editor from "./components/Editor";
+import LexicalEditor from "./components/LexicalEditor";
 import FooterPanel from "./components/FooterPanel";
 import Navbar from "./components/Navbar";
 import FileTreePanel from "./components/FileTreePanel";
@@ -267,10 +267,9 @@ function App() {
         onToggleAutoSave={toggleAutoSave}
       />
 
-      <Editor
+      <LexicalEditor
         font={appState.font}
         fontSize={appState.fontSize}
-        theme={appState.theme}
         content={appState.editorContent}
         onContentChange={setEditorContent}
       />
