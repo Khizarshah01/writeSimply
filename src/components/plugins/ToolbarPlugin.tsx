@@ -91,21 +91,7 @@ export default function ToolbarPlugin() {
 
     // Handle click
     const format = (type: "bold" | "italic" | "underline" | "code" | "strikethrough") => {
-        if (type === 'bold') {
-            editor.update(() => {
-                const selection = $getSelection();
-                if ($isRangeSelection(selection)) {
-                    if (selection.isCollapsed()) {
-                        selection.insertText('****');
-                    } else {
-                        const text = selection.getTextContent();
-                        selection.insertText(`**${text}**`);
-                    }
-                }
-            });
-        } else {
-            editor.dispatchCommand(FORMAT_TEXT_COMMAND, type);
-        }
+        editor.dispatchCommand(FORMAT_TEXT_COMMAND, type);
     };
 
     const Button = ({ type, active, icon: Icon, onClick }: { type: string, active: boolean, icon: any, onClick: () => void }) => (
