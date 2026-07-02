@@ -1,28 +1,27 @@
 <div align="center">
 
-<img src="https://github.com/user-attachments/assets/fd7f2ed1-5855-465c-a3b7-36df24f24b8d" alt="writeSimply" />
-
+  
 # writeSimply
-
-**A minimal, distraction-free desktop writing app — offline-first, no accounts, no subscriptions.**
+  
+**A minimal, distraction-free desktop writing app, offline-first, no accounts, no subscriptions.**
 
 Cross-platform (Linux · macOS · Windows) desktop app built with **Tauri + React + TypeScript**, with a native **Rust** backend for local file storage and audio playback.
 
 ![Stars](https://img.shields.io/github/stars/Khizarshah01/writeSimply?style=social)
 [![License](https://img.shields.io/badge/license-see%20LICENSE-blue.svg)](./LICENSE)
-[![Buy Me A Coffee](https://img.buymeacoffee.com/button-api/?text=Buy%20me%20a%20coffee&slug=khizarshah01&button_colour=FFDD00&font_colour=000000&font_family=Comic&outline_colour=000000&coffee_colour=ffffff)](https://www.buymeacoffee.com/khizarshah01)
 
+<img src="https://github.com/user-attachments/assets/fd7f2ed1-5855-465c-a3b7-36df24f24b8d" alt="writeSimply" />
 </div>
 
 ---
 
 ## Overview
 
-writeSimply is a lightweight desktop writing environment for people who just want to write. Notes live on your machine as local files — it works fully offline, opens instantly, and stays out of your way.
+writeSimply is a lightweight desktop writing environment for people who just want to write. Notes live on your machine as local files, it works fully offline, opens instantly, and stays out of your way.
 
-Because it's built on **Tauri**, the app ships as a small native binary (it uses the OS's own webview instead of bundling a browser like Electron does), while a **Rust** backend handles file persistence, folder organisation, and background music playback.
+Because it's built on **Tauri**, the app ships as a small native binary
 
-> Loved by the community: **43+ GitHub stars** and support from real users through Buy Me a Coffee. ⭐
+> Loved by the community: **43+ GitHub stars** and support from real users through Buy Me a Coffee.
 
 ## Screenshots
 
@@ -54,28 +53,6 @@ Because it's built on **Tauri**, the app ships as a small native binary (it uses
 | **Animation** | Motion (Framer Motion) |
 | **Testing** | Vitest |
 
-## Architecture
-
-writeSimply is split across a **React/TypeScript frontend** (the UI, editor, and state) and a **Rust backend** (the filesystem and OS integration). They communicate over Tauri's **IPC bridge**: the frontend calls `invoke("command_name", args)`, which runs a `#[tauri::command]` function in Rust and returns a typed result.
-
-```txt
-┌──────────────────────────────────────────────┐
-│  Frontend  (React + TypeScript, in webview)   │
-│                                               │
-│   LexicalEditor · FileTreePanel · Settings    │
-│   MusicPlayer · Timer · Theme                 │
-└───────────────┬───────────────────────────────┘
-                │  invoke("save_file", ...)   Tauri IPC
-                ▼
-┌──────────────────────────────────────────────┐
-│  Backend  (Rust — src-tauri/src/lib.rs)       │
-│                                               │
-│   save_file / load_file / list_files          │  ← notes as JSON in
-│   create_folder / delete_item                 │    app_data_dir/user_data
-│   play_audio / stop_audio / is_audio_playing  │  ← native OS audio player
-└──────────────────────────────────────────────┘
-```
-
 **Design highlights**
 - **Typed IPC contract** — a shared `WritingFile` struct (name, text, font, font size, theme) is serialised with `serde` on the Rust side and mirrored in TypeScript, so data crosses the boundary type-safely.
 - **Local persistence** — notes are written as JSON into the platform-specific app data directory; folders map directly to real directories, and `list_files` walks them recursively.
@@ -96,9 +73,9 @@ git clone https://github.com/Khizarshah01/writeSimply.git
 cd writeSimply
 
 # install frontend deps
-npm install        # or: bun install
+npm install
 
-# run the app in dev mode (hot-reloads the webview)
+# run the app in dev mode
 npm run tauri dev
 ```
 
@@ -110,27 +87,9 @@ npm run tauri build
 
 The packaged installer/binary is emitted under `src-tauri/target/release/`.
 
-## Project Structure
-
-```txt
-writeSimply/
-├── src/                      # React + TypeScript frontend
-│   ├── components/
-│   │   ├── LexicalEditor.tsx     # rich-text editor
-│   │   ├── plugins/ToolbarPlugin.tsx
-│   │   ├── FileTreePanel.tsx     # notes & folders sidebar
-│   │   ├── MusicPlayer.tsx
-│   │   ├── SettingsPanel.tsx
-│   │   └── ui/                   # shared UI components
-│   └── App.tsx
-└── src-tauri/                # Rust backend
-    ├── src/lib.rs                # Tauri commands (files + audio)
-    └── Cargo.toml
-```
-
 ## Contributing
 
-Ideas and PRs are welcome — if there's a feature that would help other writers, open an issue or a pull request.
+Ideas and PRs are welcome, if there's a feature that would help other writers, open an issue or a pull request.
 
 ## Support
 
