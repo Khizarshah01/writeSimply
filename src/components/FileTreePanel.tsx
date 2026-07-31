@@ -1,9 +1,12 @@
 import { useState, useEffect } from "react";
 import { Tree, Folder, File, TreeViewElement } from "./ui/file-tree"; // Adjust import path as needed
-import { RxCross2, RxFileText } from "react-icons/rx";
+import XIcon from "@/components/ui/x-icon";
+import FileTextIcon from "@/components/ui/file-description-icon"; // for file icon
 import { invoke } from "@tauri-apps/api/core";
 import { ask } from "@tauri-apps/plugin-dialog";
-import { FolderIcon, Plus, Trash2 } from "lucide-react";
+import FileDescriptionIcon from "@/components/ui/file-description-icon";
+import TrashIcon from "@/components/ui/trash-icon";
+import { Plus } from "lucide-react";
 
 interface FileTreePanelProps {
     files: string[];
@@ -125,17 +128,17 @@ export default function FileTreePanel({
     };
 
     return (
-        <div className="fixed bottom-20 right-8 z-50 w-80 bg-black/90 backdrop-blur-md rounded-xl p-6 shadow-2xl border border-white/20 text-white flex flex-col max-h-[500px]">
+        <div className="fixed bottom-20 right-8 z-50 w-80 backdrop-blur-md rounded-xl p-6 shadow-2xl border border-[var(--border)] flex flex-col max-h-[360px] transition-colors duration-300" style={{ backgroundColor: 'var(--card)', color: 'var(--text-color)' }}>
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
-                        <RxFileText className="w-5 h-5 text-blue-400" />
+                        <FileTextIcon className="w-5 h-5 text-blue-400" />
                     </div>
                     <h3 className="text-lg font-bold">Files</h3>
                 </div>
-                <button onClick={onClose} className="text-white/70 hover:text-white transition-colors">
-                    <RxCross2 size={20} />
+                <button onClick={onClose} className="opacity-70 hover:opacity-100 transition-colors">
+                    <XIcon size={20} />
                 </button>
             </div>
 
@@ -144,9 +147,9 @@ export default function FileTreePanel({
                 {isCreatingFile || isCreatingFolder ? (
                     <div className="flex flex-col gap-2">
                         {selectedParent && (
-                            <div className="text-xs text-white/50 flex items-center gap-1">
+                            <div className="text-xs opacity-50 flex items-center gap-1">
                                 in: <span className="text-blue-400 font-mono">{selectedParent}</span>
-                                <button onClick={() => setSelectedParent(null)} className="hover:text-white"><RxCross2 /></button>
+                                <button onClick={() => setSelectedParent(null)} className="hover:text-white"><XIcon size={12} /></button>
                             </div>
                         )}
                         <div className="flex gap-2">
@@ -155,52 +158,56 @@ export default function FileTreePanel({
                                 value={newItemName}
                                 onChange={e => setNewItemName(e.target.value)}
                                 placeholder={isCreatingFolder ? "Folder name..." : "File name..."}
-                                className="flex-1 bg-white/10 rounded px-2 py-1 text-sm outline-none focus:ring-1 ring-blue-500"
+                                className="flex-1 rounded px-2 py-1 text-sm outline-none focus:ring-1 ring-blue-500" style={{ backgroundColor: 'var(--muted)' }}
                                 onKeyDown={e => e.key === 'Enter' && handleCreate()}
                             />
                             <button onClick={handleCreate} className="text-green-400 text-xs uppercase font-bold">Add</button>
-                            <button onClick={() => { setIsCreatingFile(false); setIsCreatingFolder(false); }} className="text-red-400 text-xs">X</button>
+                            <button onClick={() => { setIsCreatingFile(false); setIsCreatingFolder(false); }} className="text-red-400 text-xs">
+                                <XIcon size={12} />
+                            </button>
                         </div>
                     </div>
                 ) : (
                     <div className="flex gap-2">
                         <button
                             onClick={() => { setSelectedParent(null); setIsCreatingFile(true); }}
-                            className="flex-1 bg-white/5 hover:bg-white/10 rounded py-1 px-2 text-xs flex items-center justify-center gap-1 transition-colors"
+                            className="flex-1 rounded py-1 px-2 text-xs flex items-center justify-center gap-1 transition-colors" style={{ backgroundColor: 'var(--muted)' }}
                         >
                             <Plus size={12} /> New File
                         </button>
                         <button
                             onClick={() => { setSelectedParent(null); setIsCreatingFolder(true); }}
-                            className="flex-1 bg-white/5 hover:bg-white/10 rounded py-1 px-2 text-xs flex items-center justify-center gap-1 transition-colors"
+                            className="flex-1 rounded py-1 px-2 text-xs flex items-center justify-center gap-1 transition-colors" style={{ backgroundColor: 'var(--muted)' }}
                         >
-                            <FolderIcon size={12} /> New Folder
+                            <FileDescriptionIcon size={12} /> New Folder
                         </button>
                     </div>
                 )}
             </div>
 
             {/* Tree content */}
-            <div className="flex-1 overflow-hidden relative">
+            <div className="flex-1 min-h-0 overflow-hidden relative">
                 {elements.length === 0 ? (
-                    <p className="text-center text-white/40 text-sm py-4">No files found</p>
+                    <p className="text-center opacity-40 text-sm py-4">No files found</p>
                 ) : (
-                    <Tree
-                        className="h-full overflow-y-auto"
-                        initialSelectedId=""
-                        indicator={true}
-                        elements={elements}
-                    >
-                        {elements.map(element => (
-                            <RecursiveTreeItem
-                                key={element.id}
-                                element={element}
-                                onLoad={onLoadFile}
-                                onDelete={handleDelete}
-                                onStartCreate={startCreatingIn}
-                            />
-                        ))}
-                    </Tree>
+                    <div className="max-h-[220px] overflow-y-auto rounded-md border border-[var(--border)]/40 bg-[var(--background)]/40 p-1">
+                        <Tree
+                            className=""
+                            initialSelectedId=""
+                            indicator={true}
+                            elements={elements}
+                        >
+                            {elements.map(element => (
+                                <RecursiveTreeItem
+                                    key={element.id}
+                                    element={element}
+                                    onLoad={onLoadFile}
+                                    onDelete={handleDelete}
+                                    onStartCreate={startCreatingIn}
+                                />
+                            ))}
+                        </Tree>
+                    </div>
                 )}
             </div>
         </div>
@@ -225,21 +232,21 @@ const RecursiveTreeItem = ({
             <Folder
                 element={
                     <div className="flex items-center justify-between w-full pr-2 group">
-                        <span>{element.name}</span>
+                        <span className="flex-1">{element.name}</span>
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button
                                 onClick={(e) => { e.stopPropagation(); onStartCreate(element.id); }}
-                                className="p-1 hover:bg-white/10 rounded text-blue-300"
+                                className="p-1 hover:opacity-80 rounded text-blue-300"
                                 title="Add file here"
                             >
                                 <Plus size={12} />
                             </button>
                             <button
                                 onClick={(e) => { e.stopPropagation(); onDelete(element.id, true); }}
-                                className="p-1 hover:bg-white/10 rounded text-red-400"
+                                className="p-1 hover:opacity-80 rounded text-red-400"
                                 title="Delete folder"
                             >
-                                <Trash2 size={12} />
+                                <TrashIcon size={12} />
                             </button>
                         </div>
                     </div>
@@ -266,9 +273,9 @@ const RecursiveTreeItem = ({
             </File>
             <button
                 onClick={(e) => { e.stopPropagation(); onDelete(element.id, false); }}
-                className="opacity-0 group-hover:opacity-100 text-white/40 hover:text-red-400 transition-opacity"
+                className="opacity-0 group-hover:opacity-100 hover:text-red-400 transition-opacity" style={{ color: 'var(--muted-foreground)' }}
             >
-                <Trash2 size={12} />
+                <TrashIcon size={12} />
             </button>
         </div>
     );

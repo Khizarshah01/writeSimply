@@ -1,0 +1,64 @@
+Video Conference statistics queries run sequentially instead of in parallel
+
+
+### Description:
+
+The `getStatistics()`method in the Video Conference service currently runs 7 independent database count queries one after another, even though none of them depend on each other's results.
+Each call to  `countByTypeAndStatus` waits for the previous one to finish before starting, so the total time spent is roughly the sum of all 7 query times. Since these are all read only `countDocuments` calls on a compound indexed collection (`{ type, status }`) using `readSecondaryPreferred`, they're safe to run concurrently.
+ 
+
+
+### Expected behavior:
+
+These independent count queries should be wrapped in a single Promise.all() block to execute concurrently. By executing in parallel, total latency drops from the sum of all 7 query times down to roughly the slowest single query.
+
+```js
+const [vcStarted, vcEnded, dCalling, dStarted, dEnded, lcStarted, lcEnded] = await Promise.all([
+    VideoConferenceModel.countByTypeAndStatus('videoconference', VideoConferenceStatus.STARTED, options),
+    // ... 
+]);
+
+```
+
+### Actual behavior:
+
+Queries are currently executed sequentially, increasing total wait time during statistics collection.
+
+```js
+// Runs sequentially — each query waits for the previous
+started: await VideoConferenceModel.countByTypeAndStatus('videoconference', VideoConferenceStatus.STARTED, options),
+ended:   await VideoConferenceModel.countByTypeAndStatus('videoconference', VideoConferenceStatus.ENDED, options),
+// ... 5 more awaits
+```
+
+### Relevant logs:
+none.
+
+dfdfdfdfjdfjdklfkdjklfjdkljfkl;djfkl;sjedkl;fjs
+
+
+
+
+
+khizarsfdfsdjfdjfsdjfsdjlkfjklsdjfklasdjklfjasdkljfjklsdjfjkljsdjklfjsadjkljfklj;sdjfkl;jsdk;ljfkl;asdjfkl;jsdkl;fjaskl;djfkl;asdjk;lfjsdkl;jfklsdjfkl;jsdklfjskla;djfkl;sdjfkljaskl;dfjk;sdlajfkl;jklfjaskljhfajkhjksdahjfkdhsjkhsdjkhfjkldfjkldhsjklfhljkdsjhsdjkfhjsdkhfjksdhfjksdhfjkhdsfjhdasjfhjksdhfjsdjfhjksdhfjkhsdjklfhdjkfh
+
+dfdfd
+
+
+
+sd
+
+fd
+
+fd
+
+f
+
+df
+
+df
+
+
+
+
+

@@ -7,7 +7,7 @@ import React, {
   useState,
 } from "react"
 import * as AccordionPrimitive from "@radix-ui/react-accordion"
-import { FileIcon, FolderIcon, FolderOpenIcon } from "lucide-react"
+import FileDescriptionIcon from "@/components/ui/file-description-icon"
 
 import { cn } from "@/lib/utils"
 
@@ -62,8 +62,8 @@ const Tree = forwardRef<HTMLDivElement, TreeViewProps>(
       initialExpandedItems,
       children,
       indicator = true,
-      openIcon,
-      closeIcon,
+      openIcon = <FileDescriptionIcon className="size-4" />,
+      closeIcon = <FileDescriptionIcon className="size-4" />,
       dir,
       ...props
     },
@@ -225,8 +225,8 @@ const Folder = forwardRef<
       expandedItems,
       indicator,
       setExpandedItems,
-      openIcon,
-      closeIcon,
+      openIcon = <FileDescriptionIcon className="size-4" />,
+      closeIcon = <FileDescriptionIcon className="size-4" />,
     } = useTree()
 
     return (
@@ -249,8 +249,8 @@ const Folder = forwardRef<
           onClick={() => handleExpand(value)}
         >
           {expandedItems?.includes(value)
-            ? (openIcon ?? <FolderOpenIcon className="size-4" />)
-            : (closeIcon ?? <FolderIcon className="size-4" />)}
+            ? (openIcon ?? <FileDescriptionIcon className="size-4" />)
+            : (closeIcon ?? <FileDescriptionIcon className="size-4" />)}
           {element}
         </AccordionPrimitive.Trigger>
         <AccordionPrimitive.Content className="data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down relative h-full overflow-hidden text-sm">
@@ -292,7 +292,7 @@ const File = forwardRef<
       handleSelect,
       isSelectable = true,
       isSelect,
-      fileIcon,
+      fileIcon = <FileDescriptionIcon className="size-4" />,
       children,
       ...props
     },
@@ -317,7 +317,7 @@ const File = forwardRef<
         onClick={() => selectItem(value)}
         {...props}
       >
-        {fileIcon ?? <FileIcon className="size-4" />}
+        {fileIcon ?? <FileDescriptionIcon className="size-4" />}
         {children}
       </button>
     )

@@ -11,12 +11,13 @@ I know there are many writing apps out there, but I wanted to make my own, so I 
 If you like simple tools or want to learn Tauri, you might enjoy it too
 
 Features
-- Distraction free writing
+- Distraction free writing with beautiful paper texture
+- Focus / Zen mode (⌘F or Ctrl+F)
+- Elegant circular timer + live word count & reading time
 - Font and size customization
-- Simple timer for writing sessions
-- Works offline
-- Music Player
-- Open source and beginner-friendly
+- Ambient music player (local files)
+- Simple, aesthetic UI — nothing extra
+- Works offline • Open source
 
 If you have ideas or want to add valuable features that could help others, feel free to open a PR
 

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { save } from "@tauri-apps/plugin-dialog";
 import "./App.css";
 
 import LexicalEditor from "./components/LexicalEditor";
@@ -8,6 +9,7 @@ import Navbar from "./components/Navbar";
 import FileTreePanel from "./components/FileTreePanel";
 import NotificationContainer from "./components/NotificationContainer";
 import IntroAnimation from "./components/IntroAnimation";
+import PixelPet from "./components/PixelPet";
 
 // Types for writing session
 interface WritingFile {
@@ -24,6 +26,7 @@ interface AppState {
   fontSize: number;
   editorContent: string;
   autoSave: boolean;
+  focusMode: boolean;
 }
 
 const DEFAULT_THEME = "light";
@@ -44,6 +47,7 @@ function App() {
         fontSize: savedFontSize ? parseInt(savedFontSize) : DEFAULT_FONT_SIZE,
         editorContent: savedContent || "",
         autoSave: savedAutoSave === "true",
+        focusMode: false,
       };
     } catch (error) {
       console.error("Error loading saved preferences:", error);
@@ -53,6 +57,7 @@ function App() {
         fontSize: DEFAULT_FONT_SIZE,
         editorContent: "",
         autoSave: false,
+        focusMode: false,
       };
     }
   });
@@ -84,11 +89,6 @@ function App() {
   useEffect(() => {
     try {
       document.documentElement.dataset.theme = appState.theme;
-      if (appState.theme === "dark") {
-        document.documentElement.classList.add("dark");
-      } else {
-        document.documentElement.classList.remove("dark");
-      }
       localStorage.setItem("theme", appState.theme);
       localStorage.setItem("font", appState.font);
       localStorage.setItem("fontSize", appState.fontSize.toString());
@@ -132,10 +132,24 @@ function App() {
     [],
   );
 
+  const toggleFocusMode = useCallback(() => {
+    setAppState((prev) => ({ ...prev, focusMode: !prev.focusMode }));
+  }, []);
+
   // Track editor changes and mark unsaved
+  const [isWriting, setIsWriting] = useState(false);
+  const [showPet, setShowPet] = useState(true);
+  const [petCelebrate, setPetCelebrate] = useState(0);
+  const [petTimerDone, setPetTimerDone] = useState(0);
+  const [musicPlaying, setMusicPlaying] = useState(false);
+
   const setEditorContent = useCallback((content: string) => {
     setAppState((prev) => ({ ...prev, editorContent: content }));
     setIsSaved(false); // mark unsaved whenever content changes
+
+    // Pixel pet writing reaction
+    setIsWriting(true);
+    setTimeout(() => setIsWriting(false), 650);
   }, []);
 
   // Refresh file list
@@ -167,10 +181,10 @@ function App() {
         theme: appState.theme,
       };
 
-      const result = await invoke<string>("save_file", { file });
-      console.log("Save result:", result);
+      await invoke<string>("save_file", { file });
       if (isManual) {
         addNotification("success", "File saved successfully!");
+        setPetCelebrate((n) => n + 1);
       }
       setIsSaved(true);
       refreshFileList();
@@ -194,10 +208,9 @@ function App() {
       setCurrentFileName(fileName);
       setIsSaved(true); // loaded file is saved
       setShowHistory(false);
-      console.log("File loaded successfully:", fileName);
     } catch (error) {
       console.error("Error loading file:", error);
-      addNotification("error", "Error loding file: " + String(error));
+      addNotification("error", "Error loading file: " + String(error));
     }
   }, []);
 
@@ -229,7 +242,8 @@ function App() {
   }, [setEditorContent]);
 
   const handleSetTimer = useCallback((minutes: number) => {
-    console.log(`Timer set: ${minutes} minutes`);
+    // FooterPanel calls this with 0 when the countdown reaches the end
+    if (minutes === 0) setPetTimerDone((n) => n + 1);
   }, []);
 
   const toggleHistory = useCallback(() => {
@@ -247,25 +261,126 @@ function App() {
     window.print();
   }, []);
 
-  const [showIntro, setShowIntro] = useState(true);
+  // Export the current writing to a real file the user chooses on disk.
+  const handleExport = useCallback(
+    async (format: "txt" | "md" | "html" | "pdf") => {
+      // PDF goes through the native print dialog ("Save as PDF").
+      if (format === "pdf") {
+        window.print();
+        return;
+      }
+
+      try {
+        const baseName = currentFileName || "untitled";
+        const text = appState.editorContent;
+
+        let data = text;
+        if (format === "html") {
+          const escaped = text
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;");
+          data = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>${baseName}</title>
+<style>
+  body { font-family: ${appState.font}, serif; font-size: ${appState.fontSize}px; line-height: 1.6; max-width: 720px; margin: 4rem auto; padding: 0 1rem; white-space: pre-wrap; word-break: break-word; color: #222; }
+</style>
+</head>
+<body>${escaped}</body>
+</html>`;
+        }
+
+        const filePath = await save({
+          defaultPath: `${baseName}.${format}`,
+          filters: [{ name: format.toUpperCase(), extensions: [format] }],
+        });
+
+        if (!filePath) return; // user cancelled
+
+        await invoke<string>("export_file", { path: filePath, content: data });
+        addNotification("success", `Exported as ${format.toUpperCase()}`);
+      } catch (error) {
+        addNotification("error", `Export failed: ${error}`);
+      }
+    },
+    [appState.editorContent, appState.font, appState.fontSize, currentFileName],
+  );
+
+  // Global keyboard shortcuts:
+  // Cmd/Ctrl+F or Cmd+/ focus mode · Cmd+S save · Cmd+N new · Cmd+, settings · ESC exits focus
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isMod = e.metaKey || e.ctrlKey;
+      const key = e.key.toLowerCase();
+      if (isMod && (key === 'f' || e.key === '/')) {
+        e.preventDefault();
+        toggleFocusMode();
+      } else if (isMod && key === 's') {
+        e.preventDefault();
+        handleSave(true);
+      } else if (isMod && key === 'n') {
+        e.preventDefault();
+        handleNewSession();
+      } else if (isMod && e.key === ',') {
+        e.preventDefault();
+        window.dispatchEvent(new CustomEvent('ws:toggle-settings'));
+      }
+      if (e.key === 'Escape' && appState.focusMode) {
+        toggleFocusMode();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [toggleFocusMode, appState.focusMode, handleSave, handleNewSession]);
+
+  // welcome animation only on the very first launch — after that the app opens instantly
+  const [showIntro, setShowIntro] = useState(() => {
+    try {
+      return localStorage.getItem("hasSeenIntro") !== "true";
+    } catch {
+      return true;
+    }
+  });
+  const handleIntroComplete = useCallback(() => {
+    try {
+      localStorage.setItem("hasSeenIntro", "true");
+    } catch {
+      // ignore storage failures
+    }
+    setShowIntro(false);
+  }, []);
+
+  // Clear any persisted focus mode so main UI (navbar/footer) is never hidden on startup
+  useEffect(() => {
+    localStorage.removeItem("focusMode");
+  }, []);
 
   if (showIntro) {
-    return <IntroAnimation onComplete={() => setShowIntro(false)} />;
+    return <IntroAnimation onComplete={handleIntroComplete} />;
   }
 
   return (
-    <div className="app-container min-h-screen flex flex-col bg-[var(--background)] text-[var(--text-color)] transition-colors duration-300 relative">
-      <Navbar
-        theme={appState.theme}
-        setTheme={setTheme}
-        onSave={() => handleSave(true)}
-        onPrint={handlePrint}
-        currentFileName={currentFileName}
-        isSaved={isSaved}
-        onRename={handleRename}
-        autoSave={appState.autoSave}
-        onToggleAutoSave={toggleAutoSave}
-      />
+    <div className={`app-container min-h-screen flex flex-col bg-[var(--background)] text-[var(--text-color)] transition-colors duration-300 relative ${appState.focusMode ? 'focus-mode' : ''}`}>
+      {!appState.focusMode && (
+        <Navbar
+          theme={appState.theme}
+          setTheme={setTheme}
+          onSave={() => handleSave(true)}
+          onPrint={handlePrint}
+          onExport={handleExport}
+          currentFileName={currentFileName}
+          isSaved={isSaved}
+          onRename={handleRename}
+          autoSave={appState.autoSave}
+          onToggleAutoSave={toggleAutoSave}
+          showPet={showPet}
+          setShowPet={setShowPet}
+          onMusicPlayingChange={setMusicPlaying}
+        />
+      )}
 
       <LexicalEditor
         font={appState.font}
@@ -274,17 +389,31 @@ function App() {
         onContentChange={setEditorContent}
       />
 
-      <FooterPanel
-        font={appState.font}
-        fontSize={appState.fontSize}
-        setFont={setFont}
-        setFontSize={setFontSize}
-        setNewSession={handleNewSession}
-        setTimer={handleSetTimer}
-        onShowHistory={toggleHistory}
-      />
+      {!appState.focusMode && (
+        <FooterPanel
+          font={appState.font}
+          fontSize={appState.fontSize}
+          setFont={setFont}
+          setFontSize={setFontSize}
+          setNewSession={handleNewSession}
+          setTimer={handleSetTimer}
+          onShowHistory={toggleHistory}
+          text={appState.editorContent}
+        />
+      )}
 
-      {showHistory && (
+      {showPet && (
+        <PixelPet
+          isWriting={isWriting}
+          celebrate={petCelebrate}
+          timerDone={petTimerDone}
+          theme={appState.theme}
+          focusMode={appState.focusMode}
+          musicPlaying={musicPlaying}
+        />
+      )}
+
+      {showHistory && !appState.focusMode && (
         <FileTreePanel
           files={fileList}
           onLoadFile={handleLoadFile}
@@ -298,6 +427,16 @@ function App() {
         notifications={notifications}
         removeNotification={removeNotification}
       />
+
+      {/* Beautiful minimal focus exit hint */}
+      {appState.focusMode && (
+        <div 
+          onClick={toggleFocusMode}
+          className="fixed bottom-5 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-[10px] tracking-widest bg-[var(--background)]/70 backdrop-blur border border-[var(--text-color)]/10 text-[var(--text-color)]/70 hover:text-[var(--text-color)] cursor-pointer transition-all select-none z-50"
+        >
+          PRESS ESC OR CLICK TO EXIT FOCUS
+        </div>
+      )}
     </div>
   );
 }

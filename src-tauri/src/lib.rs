@@ -139,6 +139,19 @@ fn delete_item(app_handle: AppHandle, name: String) -> Result<String, String> {
     Err("Item not found".into())
 }
 
+#[tauri::command]
+fn export_file(path: String, content: String) -> Result<String, String> {
+    let target = PathBuf::from(&path);
+
+    // Ensure the destination directory exists.
+    if let Some(parent) = target.parent() {
+        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+
+    fs::write(&target, content).map_err(|e| e.to_string())?;
+    Ok(format!("Exported to {}", path))
+}
+
 struct AudioState {
     current_process: Option<std::process::Child>,
     current_song_path: Option<String>,
@@ -216,10 +229,16 @@ fn stop_audio(state: tauri::State<Mutex<AudioState>>) -> Result<(), String> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let mut builder = tauri::Builder::default();
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    {
+        // remember window size & position across launches
+        builder = builder.plugin(tauri_plugin_window_state::Builder::default().build());
+    }
+    builder
         .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_dialog::init()) 
-        .plugin(tauri_plugin_fs::init()) 
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_fs::init())
         .manage(Mutex::new(AudioState::default()))
         .invoke_handler(tauri::generate_handler![
             get_user_folder,
@@ -228,6 +247,7 @@ pub fn run() {
             list_files,
             create_folder,
             delete_item,
+            export_file,
             play_audio,
             stop_audio,
             is_audio_playing

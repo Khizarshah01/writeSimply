@@ -1,8 +1,8 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import MusicPlayer from "./MusicPlayer";
 
-import { SlEarphones } from "react-icons/sl";
-import { IoSettingsOutline } from "react-icons/io5";
+import { Music } from "lucide-react";
+import GearIcon from "@/components/ui/gear-icon";
 import { invoke } from "@tauri-apps/api/core";
 import { getNextUntitledName } from "../utils";
 import SettingsPanel from "./SettingsPanel";
@@ -12,11 +12,15 @@ interface NavbarProps {
   setTheme: (theme: string) => void;
   onSave: () => void;
   onPrint: () => void;
+  onExport: (format: "txt" | "md" | "html" | "pdf") => void;
   currentFileName: string | null;
   isSaved: boolean;
   onRename: (newName: string) => void;
   autoSave: boolean;
   onToggleAutoSave: () => void;
+  showPet?: boolean;
+  setShowPet?: (value: boolean) => void;
+  onMusicPlayingChange?: (playing: boolean) => void;
 }
 
 const Navbar: React.FC<NavbarProps> = ({
@@ -24,13 +28,39 @@ const Navbar: React.FC<NavbarProps> = ({
   setTheme,
   onSave,
   onPrint,
+  onExport,
   currentFileName,
   isSaved,
   onRename,
   autoSave,
   onToggleAutoSave,
+  showPet = true,
+  setShowPet,
+  onMusicPlayingChange,
 }) => {
   const [showMusicPlayer, setShowMusicPlayer] = useState(false);
+  const [musicPlaying, setMusicPlaying] = useState(false);
+
+  const handlePlayingChange = useCallback(
+    (playing: boolean) => {
+      setMusicPlaying(playing);
+      onMusicPlayingChange?.(playing);
+    },
+    [onMusicPlayingChange],
+  );
+
+  // navbar unmounts in focus mode, which stops the player — tell the app
+  useEffect(() => {
+    return () => onMusicPlayingChange?.(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Cmd+, toggles the settings panel
+  useEffect(() => {
+    const toggle = () => setShowSettings((s) => !s);
+    window.addEventListener("ws:toggle-settings", toggle);
+    return () => window.removeEventListener("ws:toggle-settings", toggle);
+  }, []);
   const [isEditing, setIsEditing] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [editName, setEditName] = useState(() => {
@@ -86,30 +116,32 @@ const Navbar: React.FC<NavbarProps> = ({
     }
   };
 
+  // On macOS the window chrome is an overlay: leave room for the traffic lights
+  const isMac =
+    typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+
   return (
     <>
-      <nav className="flex justify-between items-center px-8 py-4 select-none relative">
+      <nav
+        data-tauri-drag-region
+        className={`flex justify-between items-center py-4 select-none relative pr-8 ${isMac ? "pl-[84px]" : "pl-8"}`}
+      >
         <div
           onClick={() => setShowSettings(!showSettings)}
           className="cursor-pointer hover:opacity-50 transition-opacity flex items-center gap-2"
         >
-          <IoSettingsOutline size={19} />
+          <GearIcon size={19} />
         </div>
 
 
         {/* Center: Status dot + File name input */}
         <div className="flex items-center gap-2 absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
           {/* Blinking / Pulsing Status Dot */}
-          <span className="relative flex h-3 w-3 items-center justify-center">
-            {!isSaved && (
-              <span
-                className="absolute inline-flex h-3 w-3 rounded-full !bg-red-400 opacity-60 animate-ping"
-                style={{ animationDuration: "1.5s" }}
-              ></span>
-            )}
+          <span className="relative flex h-3 w-3 items-center justify-center" title={isSaved ? "Saved" : "Unsaved changes"}>
             <span
-              className={`relative inline-flex rounded-full h-2 w-2 ${isSaved ? "!bg-green-500" : "!bg-red-500"
-                } border border-white`}
+              className={`relative inline-flex rounded-full h-2 w-2 transition-colors duration-500 ${
+                isSaved ? "!bg-emerald-500/80" : "!bg-amber-400"
+              }`}
             ></span>
           </span>
 
@@ -148,8 +180,19 @@ const Navbar: React.FC<NavbarProps> = ({
                 ? "bg-[var(--accent-color)] text-white"
                 : "hover:bg-[var(--hover-bg)] hover:opacity-70"
                 }`}
+              title={musicPlaying ? "Music playing" : "Music player"}
             >
-              <SlEarphones size={17} />
+              {musicPlaying ? (
+                <div className="eq-bars text-green-400">
+                  <span />
+                  <span />
+                  <span />
+                  <span />
+                  <span />
+                </div>
+              ) : (
+                <Music size={17} />
+              )}
             </button>
           </div>
         </div>
@@ -158,7 +201,10 @@ const Navbar: React.FC<NavbarProps> = ({
       {/* Music Player Widget */}
       {/* Music Player Widget - Always mounted for background play, controlled via visibility */}
       <div className={showMusicPlayer ? "block" : "hidden"}>
-        <MusicPlayer onClose={() => setShowMusicPlayer(false)} />
+        <MusicPlayer
+          onClose={() => setShowMusicPlayer(false)}
+          onPlayingChange={handlePlayingChange}
+        />
       </div>
 
       {showSettings && (
@@ -168,7 +214,10 @@ const Navbar: React.FC<NavbarProps> = ({
           autosave={autoSave}
           setAutosave={onToggleAutoSave}
           onPrint={onPrint}
+          onExport={onExport}
           onClose={() => setShowSettings(false)}
+          showPet={showPet}
+          setShowPet={setShowPet}
         />
       )}
 

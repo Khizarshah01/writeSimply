@@ -11,6 +11,8 @@
     "dialog:default",
     "fs:default",
     "core:window:allow-set-fullscreen",
-    "fs:allow-home-read-recursive"
+    "core:window:allow-start-dragging",
+    "fs:allow-home-read-recursive",
+    "window-state:default"
   ]
 }

@@ -10,13 +10,37 @@ import {
   Repeat,
 } from "lucide-react";
 import { open } from "@tauri-apps/plugin-dialog";
-import { readDir } from "@tauri-apps/plugin-fs";
+import { readDir, readFile } from "@tauri-apps/plugin-fs";
 import { message } from "@tauri-apps/plugin-dialog";
 import { basename } from "@tauri-apps/api/path";
 import { invoke } from "@tauri-apps/api/core";
+import XIcon from "@/components/ui/x-icon";
 
 interface MusicPlayerProps {
   onClose: () => void;
+  onPlayingChange?: (playing: boolean) => void;
+}
+
+// Zig-zag waveform path shared by the dim track and the bright animated runner.
+const WAVE_PATH =
+  "M 0 15 L 20 15 Q 25 5 30 15 Q 35 25 40 15 Q 45 -5 50 15 Q 55 35 60 15 Q 65 0 70 15 Q 75 30 80 15 Q 85 5 90 15 Q 95 20 100 15 Q 105 -10 110 15 Q 115 40 120 15 Q 125 10 130 15 Q 135 25 140 15 Q 145 0 150 15 Q 155 30 160 15 Q 165 -5 170 15 Q 175 35 180 15 Q 185 10 190 15 Q 195 20 200 15 Q 205 -5 210 15 Q 215 35 220 15 Q 225 10 230 15 Q 235 20 240 15 Q 245 5 250 15 Q 255 25 260 15 Q 265 10 270 15 Q 275 20 280 15 L 300 15";
+
+// Animated waveform: the bright runner only sweeps while music is playing.
+function Waveform({ playing }: { playing: boolean }) {
+  return (
+    <svg viewBox="0 -10 300 50" className="w-full h-auto overflow-visible">
+      <path className="wave-track" pathLength={100} d={WAVE_PATH} />
+      <path
+        className="wave-runner"
+        pathLength={100}
+        d={WAVE_PATH}
+        style={{
+          animationPlayState: playing ? "running" : "paused",
+          opacity: playing ? 1 : 0,
+        }}
+      />
+    </svg>
+  );
 }
 
 interface Song {
@@ -24,14 +48,88 @@ interface Song {
   path: string;
 }
 
-export default function MusicPlayer({ onClose }: MusicPlayerProps) {
+// Extract embedded album art from audio file (mainly ID3 APIC for MP3)
+// Falls back to null if no image or unsupported format.
+async function extractAlbumArt(path: string): Promise<string | null> {
+  try {
+    const data = await readFile(path);
+    const bytes = new Uint8Array(data);
+
+    // ID3v2 header check
+    if (bytes.length < 10 || bytes[0] !== 0x49 || bytes[1] !== 0x44 || bytes[2] !== 0x33) {
+      return null;
+    }
+
+    let offset = 10;
+    const tagSize =
+      ((bytes[6] & 0x7f) << 21) |
+      ((bytes[7] & 0x7f) << 14) |
+      ((bytes[8] & 0x7f) << 7) |
+      (bytes[9] & 0x7f);
+
+    while (offset < 10 + tagSize && offset + 10 < bytes.length) {
+      const frameId = String.fromCharCode(bytes[offset], bytes[offset + 1], bytes[offset + 2], bytes[offset + 3]);
+      const frameSize = (bytes[offset + 4] << 24) | (bytes[offset + 5] << 16) | (bytes[offset + 6] << 8) | bytes[offset + 7];
+
+      if (frameId === "APIC") {
+        let i = offset + 10;
+
+        // encoding (1 byte)
+        i += 1;
+
+        // MIME type (null-terminated string)
+        let mimeStart = i;
+        while (i < bytes.length && bytes[i] !== 0) i++;
+        const mime = new TextDecoder().decode(bytes.slice(mimeStart, i)).toLowerCase();
+        i++;
+
+        // picture type (1 byte)
+        i += 1;
+
+        // description (null terminated)
+        while (i < bytes.length && bytes[i] !== 0) i++;
+        i++;
+
+        if (i >= bytes.length) break;
+
+        const imageBytes = bytes.slice(i, offset + 10 + frameSize);
+        if (imageBytes.length === 0) return null;
+
+        let type = "image/jpeg";
+        if (imageBytes[0] === 0x89 && imageBytes[1] === 0x50 && imageBytes[2] === 0x4e) {
+          type = "image/png";
+        } else if (mime.includes("png")) {
+          type = "image/png";
+        }
+
+        const blob = new Blob([imageBytes], { type });
+        return URL.createObjectURL(blob);
+      }
+
+      offset += 10 + frameSize;
+      if (frameSize === 0) break;
+    }
+    return null;
+  } catch (e) {
+    console.warn("Failed to extract album art for", path, e);
+    return null;
+  }
+}
+
+export default function MusicPlayer({ onClose, onPlayingChange }: MusicPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
+
+  // Notify parent (Navbar) so it can show a "playing" indicator on the icon.
+  useEffect(() => {
+    onPlayingChange?.(isPlaying);
+  }, [isPlaying, onPlayingChange]);
   const [songs, setSongs] = useState<Song[]>([]);
   const [currentSongIndex, setCurrentSongIndex] = useState(0);
   const [isRepeat, setIsRepeat] = useState(false);
   const [folderPath, setFolderPath] = useState<string | null>(null);
   const [showPlaylist, setShowPlaylist] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [albumArt, setAlbumArt] = useState<string | null>(null);
 
 
 
@@ -94,7 +192,7 @@ export default function MusicPlayer({ onClose }: MusicPlayerProps) {
     }
   };
 
-  // 🎵 Select and load music folder using Tauri
+  // Select and load music folder using Tauri
   const handleSelectFolder = async () => {
     try {
       const selected = await open({
@@ -144,6 +242,41 @@ export default function MusicPlayer({ onClose }: MusicPlayerProps) {
     }
   }, []);
 
+  // Load real album art (cover image) when the current song changes
+  useEffect(() => {
+    let isCancelled = false;
+
+    async function loadCover() {
+      // Revoke previous if any
+      setAlbumArt((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return null;
+      });
+
+      const song = songs[currentSongIndex];
+      if (!song) return;
+
+      const artUrl = await extractAlbumArt(song.path);
+      if (!isCancelled) {
+        setAlbumArt(artUrl);
+      } else if (artUrl) {
+        URL.revokeObjectURL(artUrl);
+      }
+    }
+
+    loadCover();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [currentSongIndex, songs]);
+
+  // Clean up album art on unmount
+  useEffect(() => {
+    return () => {
+      if (albumArt) URL.revokeObjectURL(albumArt);
+    };
+  }, [albumArt]);
 
   // Check if audio is still playing
   const checkAudioStatus = async () => {
@@ -161,7 +294,6 @@ export default function MusicPlayer({ onClose }: MusicPlayerProps) {
     }
   };
 
-  // Play audio using Tauri command
   const playAudio = async (path: string) => {
     try {
       await invoke('play_audio', { path });
@@ -212,17 +344,25 @@ export default function MusicPlayer({ onClose }: MusicPlayerProps) {
   const handleNextSong = () => {
     if (songs.length === 0) return;
 
+    if (isRepeat) {
+      // Loop: replay the current song
+      setTimeout(async () => {
+        await playAudio(songs[currentSongIndex].path);
+      }, 300);
+      return;
+    }
+
+    // Advance to next. If we reach the end without repeat, stop.
     const nextIndex = currentSongIndex + 1 < songs.length ? currentSongIndex + 1 : 0;
     setCurrentSongIndex(nextIndex);
 
-    // Auto-play next song if repeat is enabled or if we're not at the end
-    if (isPlaying && (isRepeat || nextIndex !== 0)) {
+    if (nextIndex === 0) {
+      // End of playlist reached
+      setIsPlaying(false);
+    } else if (isPlaying) {
       setTimeout(async () => {
         await playAudio(songs[nextIndex].path);
       }, 500);
-    } else if (nextIndex === 0 && !isRepeat) {
-      // Reached end of playlist and repeat is off
-      setIsPlaying(false);
     }
   };
 
@@ -304,14 +444,14 @@ export default function MusicPlayer({ onClose }: MusicPlayerProps) {
 
   if (!folderPath) {
     return (
-      <div className="fixed top-20 right-8 z-50 w-80 bg-black/90 backdrop-blur-md rounded-xl p-6 text-center shadow-2xl border border-white/20">
-        <Music className="w-12 h-12 text-white/50 mx-auto mb-4" />
-        <p className="text-white mb-2">No music folder selected</p>
-        <p className="text-white/60 text-sm mb-4">Select a folder containing your music files</p>
+      <div className="fixed top-20 right-8 z-50 w-80 backdrop-blur-md rounded-xl p-6 text-center shadow-2xl border border-[var(--border)] transition-colors duration-300" style={{ backgroundColor: 'var(--card)', color: 'var(--text-color)' }}>
+        <Music className="w-12 h-12 opacity-50 mx-auto mb-4" />
+        <p className="mb-2">No music folder selected</p>
+        <p className="opacity-60 text-sm mb-4">Select a folder containing your music files</p>
         <button
           onClick={handleSelectFolder}
           disabled={isLoading}
-          className="px-4 py-2 bg-green-500 hover:bg-green-600 disabled:bg-gray-600 rounded-lg text-white transition flex items-center gap-2 mx-auto"
+          className="px-4 py-2 bg-green-500 hover:bg-green-600 disabled:opacity-50 rounded-lg text-white transition flex items-center gap-2 mx-auto"
         >
           <FolderOpen size={16} />
           {isLoading ? "Scanning..." : "Select Music Folder"}
@@ -323,37 +463,37 @@ export default function MusicPlayer({ onClose }: MusicPlayerProps) {
   const currentSong = songs[currentSongIndex];
 
   return (
-    <div className="fixed top-20 right-8 z-50 w-80 bg-black/90 backdrop-blur-md rounded-xl p-4 shadow-2xl border border-white/20">
+    <div className="fixed top-20 right-8 z-50 w-80 backdrop-blur-md rounded-xl p-4 shadow-2xl border border-[var(--border)] transition-colors duration-300" style={{ backgroundColor: 'var(--card)', color: 'var(--text-color)' }}>
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <button
             onClick={handleSelectFolder}
-            className="text-white hover:text-green-400 transition-colors p-1"
+            className="hover:text-green-400 transition-colors p-1"
             title="Change music folder"
           >
             <FolderOpen size={16} />
           </button>
           <div>
-            <h3 className="text-white font-bold text-sm">Music Player</h3>
-            <p className="text-white/60 text-xs truncate max-w-[180px]">
+            <h3 className="font-bold text-sm">Music Player</h3>
+            <p className="text-xs truncate max-w-[180px]" style={{ color: 'var(--muted-foreground)' }}>
               {folderPath.split(/[\\/]/).pop()}
             </p>
           </div>
         </div>
         <button
           onClick={onClose}
-          className="text-white/70 hover:text-white transition-colors text-lg"
+          className="text-white/70 hover:text-white transition-colors"
           title="Close player (music continues in background)"
         >
-          ×
+          <XIcon size={20} />
         </button>
       </div>
 
       {songs.length === 0 ? (
         <div className="text-center py-8">
-          <Music className="w-12 h-12 text-white/50 mx-auto mb-3" />
-          <p className="text-white/70 text-sm mb-3">No music files found</p>
+          <Music className="w-12 h-12 opacity-50 mx-auto mb-3" />
+          <p className="opacity-70 text-sm mb-3">No music files found</p>
           <button
             onClick={handleSelectFolder}
             className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors text-sm"
@@ -363,20 +503,35 @@ export default function MusicPlayer({ onClose }: MusicPlayerProps) {
         </div>
       ) : (
         <>
-          {/* Song Info */}
+          {/* Song Info with real album art if available */}
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center">
-              <Music className="w-6 h-6 text-white" />
+            <div className="w-14 h-14 rounded-lg overflow-hidden bg-[var(--muted)]/60 flex-shrink-0 border border-[var(--border)]/30">
+              {albumArt ? (
+                <img
+                  src={albumArt}
+                  alt="Album cover"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-[var(--muted-foreground)]">
+                  <Music className="w-6 h-6" />
+                </div>
+              )}
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="text-white font-bold text-sm truncate">
+              <h3 className="font-bold text-sm truncate">
                 {currentSong?.name || "Unknown"}
               </h3>
-              <p className="text-white/60 text-xs">
+              <p className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
                 {currentSongIndex + 1} of {songs.length}
-                {isPlaying && "Playing"}
+                {isPlaying && " Playing"}
               </p>
             </div>
+          </div>
+
+          {/* Animated waveform */}
+          <div className="mb-4 px-1">
+            <Waveform playing={isPlaying} />
           </div>
 
           {/* Controls */}
@@ -384,21 +539,21 @@ export default function MusicPlayer({ onClose }: MusicPlayerProps) {
             <div className="flex items-center gap-2">
               <button
                 onClick={handlePrev}
-                className="text-white hover:scale-110 transition-transform p-1"
+                className="hover:scale-110 transition-transform p-1"
                 disabled={songs.length === 0}
               >
                 <SkipBack size={18} />
               </button>
               <button
                 onClick={handlePlayPause}
-                className="text-white hover:scale-110 transition-transform p-2 bg-white/20 rounded-full"
+                className="hover:scale-110 transition-transform p-2 rounded-full" style={{ backgroundColor: 'var(--muted)' }}
                 disabled={songs.length === 0}
               >
                 {isPlaying ? <Pause size={16} /> : <Play size={16} />}
               </button>
               <button
                 onClick={handleNext}
-                className="text-white hover:scale-110 transition-transform p-1"
+                className="hover:scale-110 transition-transform p-1"
                 disabled={songs.length === 0}
               >
                 <SkipForward size={18} />
@@ -408,14 +563,14 @@ export default function MusicPlayer({ onClose }: MusicPlayerProps) {
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setIsRepeat(!isRepeat)}
-                className={`p-1 ${isRepeat ? 'text-green-400' : 'text-white'}`}
-                title="Repeat"
+                className={`p-1 rounded-md transition-colors ${isRepeat ? 'bg-green-500/20 text-green-400' : 'hover:bg-[var(--muted)]'}`}
+                title="Repeat (loop current track)"
               >
                 <Repeat size={16} />
               </button>
               <button
                 onClick={() => setShowPlaylist(!showPlaylist)}
-                className="text-white p-1"
+                className="p-1"
                 title="Playlist"
               >
                 <List size={16} />
@@ -425,7 +580,7 @@ export default function MusicPlayer({ onClose }: MusicPlayerProps) {
 
           {/* Playlist */}
           {showPlaylist && (
-            <div className="mt-3 bg-gray-900/90 rounded-lg max-h-40 overflow-y-auto p-2 space-y-1">
+            <div className="mt-3 rounded-lg max-h-40 overflow-y-auto p-2 space-y-1" style={{ backgroundColor: 'var(--muted)' }}>
               {songs.map((song, index) => (
                 <div
                   key={index}
@@ -442,8 +597,8 @@ export default function MusicPlayer({ onClose }: MusicPlayerProps) {
                     }
                   }}
                   className={`flex items-center p-2 rounded cursor-pointer transition-colors ${index === currentSongIndex
-                    ? 'bg-green-500/30 text-white'
-                    : 'text-white/80 hover:bg-white/10'
+                    ? 'bg-green-500/30'
+                    : 'opacity-80 hover:opacity-100'
                     }`}
                 >
                   <div className="flex-1 min-w-0">
@@ -452,7 +607,7 @@ export default function MusicPlayer({ onClose }: MusicPlayerProps) {
                       {index === currentSongIndex && isPlaying && " ▶"}
                     </p>
                   </div>
-                  <span className="text-xs text-white/60">{index + 1}</span>
+                  <span className="text-xs" style={{ color: 'var(--muted-foreground)' }}>{index + 1}</span>
                 </div>
               ))}
             </div>

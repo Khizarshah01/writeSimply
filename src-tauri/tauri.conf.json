@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "writesimply",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "identifier": "com.rinx.writesimply",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -13,9 +13,14 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "writesimply",
-        "width": 800,
-        "height": 600
+        "title": "WriteSimply",
+        "width": 1080,
+        "height": 720,
+        "minWidth": 720,
+        "minHeight": 520,
+        "center": true,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true
       }
     ],
     "security": {

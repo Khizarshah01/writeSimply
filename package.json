@@ -1,7 +1,7 @@
 {
   "name": "writesimply",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,6 +10,7 @@
     "tauri": "tauri"
   },
   "dependencies": {
+    "@lexical/list": "^0.40.0",
     "@lexical/react": "^0.40.0",
     "@radix-ui/react-accordion": "^1.2.12",
     "@tailwindcss/vite": "^4.1.14",
@@ -38,5 +39,6 @@
     "typescript": "~5.8.3",
     "vite": "^7.0.4",
     "vitest": "^4.0.18"
-  }
+  },
+  "packageManager": "yarn@1.22.22+sha1.ac34549e6aa8e7ead463a7407e1c7390f61a6610"
 }

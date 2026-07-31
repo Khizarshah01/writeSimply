@@ -1,5 +1,7 @@
 import React, { useEffect } from "react";
-import { CheckCircle, AlertCircle, Info } from "lucide-react";
+import CheckedIcon from "@/components/ui/checked-icon";
+import InfoCircleIcon from "@/components/ui/info-circle-icon";
+import TriangleAlertIcon from "@/components/ui/triangle-alert-icon";
 
 interface NotificationProps {
   type?: "success" | "error" | "info";
@@ -9,9 +11,9 @@ interface NotificationProps {
 }
 
 const icons = {
-  success: <CheckCircle className="text-green-400" size={20} />,
-  error: <AlertCircle className="text-red-400" size={20} />,
-  info: <Info className="text-blue-400" size={20} />,
+  success: <CheckedIcon className="text-green-400" size={20} />,
+  error: <TriangleAlertIcon className="text-red-400" size={20} />,
+  info: <InfoCircleIcon className="text-blue-400" size={20} />,
 };
 
 const Notification: React.FC<NotificationProps> = ({

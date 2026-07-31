@@ -1,26 +1,139 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* ── Bundled fonts (SIL OFL): Lora for prose, JetBrains Mono for mono ── */
+@font-face {
+  font-family: "Lora";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./assets/fonts/Lora-400.woff2") format("woff2");
+}
 
+@font-face {
+  font-family: "Lora";
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./assets/fonts/Lora-400-italic.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Lora";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("./assets/fonts/Lora-600.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./assets/fonts/JetBrainsMono-400.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("./assets/fonts/JetBrainsMono-500.woff2") format("woff2");
+}
+
+:root {
+  --font-serif: "Lora", "Iowan Old Style", Georgia, "Times New Roman", serif;
+  --font-mono: "JetBrains Mono", "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+}
+
+/* themed text selection */
+::selection {
+  background: rgba(59, 130, 246, 0.22);
+}
 
 :root[data-theme="light"] {
   --background: #fdfcfb;
   --text-color: #222222;
+  --code-bg: rgba(0, 0, 0, 0.08);
+
+  --radius: 0.625rem;
+  --foreground: oklch(0.145 0 0);
+  --card: #fdfcfb;
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
 }
 
 :root[data-theme="dark"] {
   --background: #1a1a1a;
   --text-color: #f2f2f2;
-}
+  --code-bg: rgba(255, 255, 255, 0.12);
 
-:root[data-theme="sepia"] {
-  --background: #f4ecd8;
-  --text-color: #4b3f2f;
+  --radius: 0.625rem;
+  --foreground: oklch(0.985 0 0);
+  --card: #1a1a1a;
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
 }
 
 * {
-  background-color: var(--background);
   color: var(--text-color);
+}
+
+body {
+  background-color: var(--background);
 }
 
 /* In your global CSS file */
@@ -115,6 +228,44 @@ body,
   overflow: hidden;
 }
 
+/* ── Focus Mode: ultimate simplicity & aesthetic ── */
+.focus-mode {
+  cursor: default;
+}
+
+.focus-mode .editor-surface {
+  max-width: 780px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* The editor gets breathing room */
+.focus-mode .LexicalEditorWrapper,
+.focus-mode [class*="max-w-4xl"] {
+  padding-top: 8vh;
+}
+
+/* Ensure the editor area can scroll when content is long */
+.editor-surface > [contenteditable="true"] {
+  overflow-y: auto !important;
+}
+
+/* Typewriter mode: current line centered, everything else gently dimmed */
+.focus-mode [contenteditable="true"] {
+  overflow-y: auto;
+  padding-top: 42vh !important;
+  padding-bottom: 42vh !important;
+}
+
+.focus-mode [contenteditable="true"] > * {
+  opacity: 0.25;
+  transition: opacity 0.35s ease;
+}
+
+.focus-mode [contenteditable="true"] > .active-line {
+  opacity: 1;
+}
+
 @media print {
 
   /* Hide non-printable elements */
@@ -162,74 +313,61 @@ body,
   display: none;
 }
 
-:root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+/* ── Music Player waveform ── */
+.wave-track {
+  fill: none;
+  stroke: var(--muted-foreground);
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.3;
 }
 
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+.wave-runner {
+  fill: none;
+  stroke: #22c55e;
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 30 100;
+  animation: runZigZag 2s infinite ease-in-out;
+  transition: opacity 0.4s ease;
 }
+
+@keyframes runZigZag {
+  0% { stroke-dashoffset: 130; }
+  50% { stroke-dashoffset: -30; }
+  100% { stroke-dashoffset: 130; }
+}
+
+/* ── "Music is playing" equalizer bars (sized to the navbar icon) ── */
+.eq-bars {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 17px;
+}
+
+.eq-bars span {
+  width: 2px;
+  height: 4px;
+  background-color: currentColor;
+  border-radius: 2px;
+  animation: eqBounce 1.2s infinite ease-in-out;
+}
+
+.eq-bars span:nth-child(1) { animation-delay: 0s; }
+.eq-bars span:nth-child(2) { animation-delay: 0.3s; }
+.eq-bars span:nth-child(3) { animation-delay: 0.6s; }
+.eq-bars span:nth-child(4) { animation-delay: 0.2s; }
+.eq-bars span:nth-child(5) { animation-delay: 0.5s; }
+
+@keyframes eqBounce {
+  0%, 100% { height: 4px; }
+  50% { height: 15px; }
+}
+
+/* shadcn variables are now in data-theme blocks above */
 
 ::view-transition-old(root),
 ::view-transition-new(root) {
@@ -260,4 +398,177 @@ body,
 
 textarea::placeholder {
   color: transparent !important;
+}
+
+/* ── Markdown typography (theme-var driven) ── */
+.editor-h1 {
+  font-size: 1.8em;
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 0.9em 0 0.35em;
+  letter-spacing: -0.015em;
+}
+
+.editor-h2 {
+  font-size: 1.45em;
+  font-weight: 600;
+  line-height: 1.3;
+  margin: 0.8em 0 0.3em;
+  letter-spacing: -0.01em;
+}
+
+.editor-h3 {
+  font-size: 1.2em;
+  font-weight: 600;
+  line-height: 1.35;
+  margin: 0.7em 0 0.25em;
+}
+
+.editor-quote {
+  margin: 0.6em 0;
+  padding-left: 1em;
+  border-left: 3px solid color-mix(in srgb, var(--text-color) 25%, transparent);
+  color: color-mix(in srgb, var(--text-color) 72%, transparent);
+  font-style: italic;
+}
+
+.editor-codeblock {
+  display: block;
+  background: var(--code-bg);
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  line-height: 1.6;
+  padding: 0.8em 1em;
+  border-radius: 8px;
+  margin: 0.6em 0;
+  white-space: pre-wrap;
+  overflow-x: auto;
+}
+
+.inline-code {
+  background: var(--code-bg);
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+}
+
+.editor-link {
+  color: #3b82f6;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* ── Lexical Checklist / Todo Styles ── */
+.editor-checklist {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+}
+
+.editor-listitem {
+  position: relative;
+  padding-left: 24px;
+  margin: 3px 0;
+  line-height: 1.55;
+}
+
+.editor-listitem-checked,
+.editor-listitem-unchecked {
+  position: relative;
+  padding-left: 24px;
+  margin: 3px 0;
+  line-height: 1.55;
+  cursor: pointer;
+}
+
+.editor-listitem-checked::before,
+.editor-listitem-unchecked::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  border: 2px solid var(--muted-foreground);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+  background: transparent;
+}
+
+.editor-listitem-unchecked:hover::before {
+  border-color: var(--text-color);
+}
+
+/* Checked state — Notion style */
+.editor-listitem-checked::before {
+  border-color: #3b82f6;
+  background: #3b82f6;
+}
+
+.editor-listitem-checked::after {
+  content: "";
+  position: absolute;
+  left: 4.5px;
+  top: 50%;
+  transform: translateY(-52%) rotate(45deg);
+  width: 4px;
+  height: 8px;
+  border: solid white;
+  border-width: 0 1.5px 1.5px 0;
+  pointer-events: none;
+}
+
+.editor-listitem-checked {
+  text-decoration: line-through;
+  color: var(--muted-foreground);
+}
+
+/* ── Very subtle paper feel (toned down for background consistency) ── */
+.editor-surface {
+  position: relative;
+}
+
+.editor-surface::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: 
+    linear-gradient(rgba(0, 0, 0, 0.008) 1px, transparent 1px);
+  background-size: 100% 32px;
+  background-position: 0 12px;
+  opacity: 0.25;
+  z-index: 1;
+  border-radius: inherit;
+  mix-blend-mode: multiply;
+}
+
+:root[data-theme="dark"] .editor-surface::before {
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.012) 1px, transparent 1px);
+  opacity: 0.15;
+}
+
+/* Very subtle paper grain / texture (toned down) */
+.editor-surface::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: 
+    radial-gradient(circle at 1px 1px, rgba(0,0,0,0.015) 0.6px, transparent 0);
+  background-size: 4px 4px;
+  opacity: 0.12;
+  z-index: 1;
+  border-radius: inherit;
+}
+
+:root[data-theme="dark"] .editor-surface::after {
+  background-image: 
+    radial-gradient(circle at 1px 1px, rgba(255,255,255,0.018) 0.6px, transparent 0);
+  opacity: 0.08;
 }

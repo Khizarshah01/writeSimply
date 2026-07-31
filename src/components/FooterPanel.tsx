@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { GoHistory } from "react-icons/go";
+import HistoryCircleIcon from "@/components/ui/history-circle-icon";
 import { getCurrentWindow } from '@tauri-apps/api/window';
 
 
@@ -22,6 +22,8 @@ interface FooterPanelProps {
   setNewSession: () => void;
   setTimer: (minutes: number) => void;
   onShowHistory: () => void;
+  /** current document text, for word count / reading time */
+  text?: string;
 }
 
 const FooterPanel: React.FC<FooterPanelProps> = ({
@@ -32,8 +34,13 @@ const FooterPanel: React.FC<FooterPanelProps> = ({
   setNewSession,
   setTimer,
   onShowHistory,
+  text = "",
 }) => {
   const [timerMinutes, setTimerMinutes] = useState(15);
+
+  // word count + reading time (~220 wpm)
+  const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+  const readMinutes = Math.max(1, Math.ceil(words / 220));
   const [secondsLeft, setSecondsLeft] = useState(timerMinutes * 60);
   const [isRunning, setIsRunning] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -57,13 +64,10 @@ const FooterPanel: React.FC<FooterPanelProps> = ({
 
   const toggleFullScreen = async () => {
     const window = await getCurrentWindow();
-    console.log("Window:", window); // should not be undefined
 
     const isFullscreen = await window.isFullscreen();
-    console.log("Was fullscreen:", isFullscreen);
 
     await window.setFullscreen(!isFullscreen);
-    console.log("Now fullscreen:", !isFullscreen);
   };
 
 
@@ -126,7 +130,13 @@ const FooterPanel: React.FC<FooterPanelProps> = ({
   }, [isRunning, secondsLeft, timerMinutes, formatTime]);
 
   return (
-    <footer className="flex justify-between items-center px-6 py-3 bg-[var(--background)] border-t border-[var(--border-color)]">
+    <footer className="flex justify-between items-center px-6 py-3 bg-[var(--background)] border-t border-[var(--border-color)] relative">
+      {/* Center: word count + reading time */}
+      {words > 0 && (
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-[12px] tracking-wide opacity-45 select-none pointer-events-none whitespace-nowrap">
+          {words.toLocaleString()} {words === 1 ? "word" : "words"} · {readMinutes} min read
+        </div>
+      )}
       {/* Left: Font controls */}
       <div className="flex items-center gap-6">
         {/* Font size with scroll only */}
@@ -163,14 +173,24 @@ const FooterPanel: React.FC<FooterPanelProps> = ({
 
       {/* Right: Timer and actions */}
       <div className="flex items-center gap-6">
-        {/* Timer */}
+        {/* Timer - simple clean text matching footer style */}
         <div
-          className="cursor-pointer hover:opacity-50 select-none transition-opacity"
+          className="cursor-pointer hover:opacity-50 select-none transition-opacity relative"
           onWheel={handleTimerScroll}
           onClick={toggleTimer}
           title="Click to start/stop, scroll to adjust time"
         >
           {formatTimerDisplay()}
+          {isRunning && (
+            <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-9 h-[2px] bg-[var(--text-color)]/20 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-[var(--text-color)] transition-all duration-200"
+                style={{
+                  width: `${(secondsLeft / (timerMinutes * 60)) * 100}%`,
+                }}
+              />
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-3">
@@ -186,7 +206,7 @@ const FooterPanel: React.FC<FooterPanelProps> = ({
             className="cursor-pointer hover:opacity-50 transition-opacity"
             onClick={onShowHistory}
           >
-            <GoHistory size={18} />
+            <HistoryCircleIcon size={18} />
           </p>
         </div>
       </div>

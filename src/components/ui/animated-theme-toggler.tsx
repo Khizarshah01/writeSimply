@@ -62,7 +62,7 @@ export const AnimatedThemeToggler = ({
     <button
       ref={buttonRef}
       onClick={handleToggle}
-      className={cn("relative p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors", className)}
+      className={cn("relative p-2", className)}
       {...props}
     >
       {isDark ? <>Dark</> : <>Light</>}

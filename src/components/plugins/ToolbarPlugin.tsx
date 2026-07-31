@@ -9,13 +9,13 @@ import {
     SELECTION_CHANGE_COMMAND,
     COMMAND_PRIORITY_LOW,
 } from "lexical";
-import {
-    Bold,
-    Italic,
-    Underline,
-    Code,
-    Strikethrough
-} from "lucide-react";
+import { INSERT_CHECK_LIST_COMMAND } from "@lexical/list";
+import LetterBIcon from "@/components/ui/letter-b-icon";
+import LetterIIcon from "@/components/ui/letter-i-icon";
+import LetterUIcon from "@/components/ui/letter-u-icon";
+import CodeIcon from "@/components/ui/code-icon";
+import LetterSIcon from "@/components/ui/letter-s-icon";
+import CheckedIcon from "@/components/ui/checked-icon";
 
 export default function ToolbarPlugin() {
     const [editor] = useLexicalComposerContext();
@@ -91,7 +91,27 @@ export default function ToolbarPlugin() {
 
     // Handle click
     const format = (type: "bold" | "italic" | "underline" | "code" | "strikethrough") => {
+        // Capture if selection was a range before formatting
+        const wasRange = editor.getEditorState().read(() => {
+            const sel = $getSelection();
+            return $isRangeSelection(sel) ? !sel.isCollapsed() : false;
+        });
+
         editor.dispatchCommand(FORMAT_TEXT_COMMAND, type);
+
+        // After formatting a range selection, collapse the cursor and clear
+        // the format so that new typing does **not** continue the format.
+        // This matches the expected behavior (like Notion / Word).
+        if (wasRange) {
+            editor.update(() => {
+                const selection = $getSelection();
+                if ($isRangeSelection(selection)) {
+                    // Clear any pending text format so the next characters
+                    // you type are **not** bold/italic/etc.
+                    selection.format = 0;
+                }
+            });
+        }
     };
 
     const Button = ({ type, active, icon: Icon, onClick }: { type: string, active: boolean, icon: any, onClick: () => void }) => (
@@ -101,8 +121,8 @@ export default function ToolbarPlugin() {
                 onClick();
             }}
             className={`p-1.5 rounded-md transition-all duration-200 active:scale-95 ${active
-                ? 'bg-[var(--text-color)] text-[var(--background)] shadow-sm'
-                : 'text-[var(--text-color)] hover:bg-[var(--text-color)]/10 hover:text-[var(--text-color)]'
+                ? 'bg-[#3b82f6]/10 text-[#3b82f6]'
+                : 'text-[var(--text-color)] hover:bg-[var(--text-color)]/10'
                 }`}
             title={type.charAt(0).toUpperCase() + type.slice(1)}
             type="button"
@@ -127,12 +147,14 @@ export default function ToolbarPlugin() {
             }}
             className="flex items-center gap-1 p-1 bg-[var(--background)]/90 backdrop-blur-lg rounded-xl border border-[var(--text-color)]/10 shadow-xl fixed z-50 transition-all animate-in fade-in zoom-in-95 duration-200 ease-out"
         >
-            <Button type="bold" active={isBold} icon={Bold} onClick={() => format("bold")} />
-            <Button type="italic" active={isItalic} icon={Italic} onClick={() => format("italic")} />
-            <Button type="underline" active={isUnderline} icon={Underline} onClick={() => format("underline")} />
-            <Button type="strikethrough" active={isStrikethrough} icon={Strikethrough} onClick={() => format("strikethrough")} />
+            <Button type="bold" active={isBold} icon={LetterBIcon} onClick={() => format("bold")} />
+            <Button type="italic" active={isItalic} icon={LetterIIcon} onClick={() => format("italic")} />
+            <Button type="underline" active={isUnderline} icon={LetterUIcon} onClick={() => format("underline")} />
+            <Button type="strikethrough" active={isStrikethrough} icon={LetterSIcon} onClick={() => format("strikethrough")} />
             <Divider />
-            <Button type="code" active={isCode} icon={Code} onClick={() => format("code")} />
+            <Button type="code" active={isCode} icon={CodeIcon} onClick={() => format("code")} />
+            <Divider />
+            <Button type="checklist" active={false} icon={CheckedIcon} onClick={() => editor.dispatchCommand(INSERT_CHECK_LIST_COMMAND, undefined)} />
         </div>,
         document.body
     );

@@ -1,3 +1,17 @@
+/** Resolve a font setting ("Serif", "Monospace", or a raw family) to a full CSS font stack. */
+export function fontStack(font: string): string {
+  switch (font.toLowerCase()) {
+    case "serif":
+      return "var(--font-serif)";
+    case "monospace":
+    case "ubuntu mono":
+    case "courier new":
+      return "var(--font-mono)";
+    default:
+      return `"${font}", var(--font-serif)`;
+  }
+}
+
 export function getNextUntitledName(files: string[]): string {
   const untitledPattern = /^untitled(?:\((\d+)\))?$/;
   const untitledNumbers = new Set<number>();
